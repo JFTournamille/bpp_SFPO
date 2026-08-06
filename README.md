@@ -136,10 +136,8 @@ uvicorn app.main:app --reload --port 8000
 - `responses` — une ligne par question répondue (réponse, commentaire, preuve,
   criticité, risque maîtrisé, action corrective).
 
-## Sécurité — à prévoir avant un usage en production élargi
+## Sécurité
 
-Cette première version n'a **aucune authentification** : quiconque accède à
-l'URL peut répondre au questionnaire. Pour un déploiement au-delà d'un usage
-interne restreint, il faudra ajouter une couche d'authentification (ex: un
-mot de passe partagé via un reverse-proxy, ou une vraie authentification
-utilisateur) avant d'exposer l'app publiquement.
+Choix assumé : **pas d'authentification**. Quiconque accède à l'URL peut
+répondre au questionnaire. À garder en tête si l'URL venait à être partagée
+au-delà de l'usage interne prévu.
