@@ -9,27 +9,29 @@
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --blue:#4C87CA;
-    --blue-dark:#21759B;
-    --blue-darker:#175a78;
-    --text:#333333;
-    --text-light:#6b6b6b;
+    --blue:#3672B4;
+    --blue-dark:#175a78;
+    --blue-darker:#0f4258;
+    --fuchsia:#A22E7D;
+    --fuchsia-dark:#7D2361;
+    --text:#1c2126;
+    --text-light:#48525c;
     --bg:#ffffff;
-    --bg-soft:#f6f7f9;
-    --bg-soft-2:#eef1f4;
-    --border:#e1e4e8;
-    --green:#2e7d32;
-    --green-bg:#e8f5e9;
-    --red:#c62828;
-    --red-bg:#fdecea;
-    --orange:#ef6c00;
-    --orange-bg:#fff3e0;
-    --gray:#757575;
-    --gray-bg:#eeeeee;
+    --bg-soft:#eef1f4;
+    --bg-soft-2:#e3e8ee;
+    --border:#c7cfd8;
+    --green:#256029;
+    --green-bg:#dcf0de;
+    --red:#b32020;
+    --red-bg:#fbdedb;
+    --orange:#c25700;
+    --orange-bg:#ffe7cc;
+    --gray:#5b636b;
+    --gray-bg:#e3e5e8;
     --radius:14px;
     --radius-pill:100px;
-    --shadow:0 2px 10px rgba(20,30,50,.06);
-    --shadow-lg:0 8px 30px rgba(20,30,50,.12);
+    --shadow:0 2px 10px rgba(15,25,40,.1);
+    --shadow-lg:0 8px 30px rgba(15,25,40,.18);
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -78,6 +80,16 @@
   .btn.danger-o:hover{background:var(--red);color:#fff;}
   .btn:disabled{opacity:.5;cursor:not-allowed;}
 
+  .role-switch{display:flex;background:var(--bg-soft-2);border-radius:var(--radius-pill);padding:3px;gap:2px;}
+  .role-switch button{
+    font-family:inherit;font-size:12px;font-weight:600;padding:7px 14px;border:none;
+    border-radius:var(--radius-pill);background:transparent;color:var(--text-light);
+    cursor:pointer;transition:all .15s;white-space:nowrap;
+  }
+  .role-switch button.active{background:var(--blue);color:#fff;box-shadow:var(--shadow);}
+  .role-switch button[data-role="expert"].active{background:var(--fuchsia);}
+  .role-switch button:hover:not(.active){color:var(--blue-dark);}
+
   /* ===== Tabs ===== */
   nav.tabs{background:#fff;border-bottom:1px solid var(--border);}
   nav.tabs .wrap{display:flex;gap:4px;}
@@ -101,7 +113,7 @@
   .progress-row .label{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;}
   .progress-row .pct{font-size:13px;color:var(--blue-dark);font-weight:700;white-space:nowrap;}
   .progress-track{flex:1;height:10px;border-radius:var(--radius-pill);background:var(--bg-soft-2);overflow:hidden;}
-  .progress-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--blue-dark));border-radius:var(--radius-pill);transition:width .25s ease;}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--fuchsia));border-radius:var(--radius-pill);transition:width .25s ease;}
   .save-indicator{font-size:11.5px;color:var(--text-light);white-space:nowrap;}
   .save-indicator.saved::before{content:"● ";color:var(--green);}
   .save-indicator.error{color:var(--red);}
@@ -127,7 +139,7 @@
   .chapter-block{margin-bottom:26px;}
   .chapter-head{
     display:flex;align-items:center;gap:12px;
-    background:linear-gradient(90deg,var(--blue),var(--blue-dark));
+    background:linear-gradient(90deg,var(--blue),var(--fuchsia));
     color:#fff;border-radius:var(--radius);
     padding:14px 20px;margin-bottom:14px;
     box-shadow:var(--shadow);
@@ -169,28 +181,22 @@
   .qtext{flex:1;font-size:14.5px;color:var(--text);}
   .qtext .code{color:var(--text-light);font-weight:600;font-size:11.5px;margin-right:6px;}
 
-  .info-icon{
-    flex:none;position:relative;display:inline-flex;align-items:center;justify-content:center;
-    width:20px;height:20px;border-radius:50%;
-    background:var(--bg-soft-2);color:var(--blue-dark);
-    font-size:12px;font-weight:700;font-style:italic;font-family:Georgia,serif;
-    cursor:help;user-select:none;margin-top:1px;
+  .ref-badge{
+    flex:none;position:relative;display:inline-flex;align-items:center;
+    font-size:11px;font-weight:700;color:#fff;background:var(--blue);
+    padding:3px 10px;border-radius:var(--radius-pill);
+    cursor:help;white-space:nowrap;margin-top:1px;user-select:none;
   }
-  .info-icon:hover, .info-icon.open{background:var(--blue);color:#fff;}
-  .info-icon .tooltip{
+  .ref-badge:hover, .ref-badge.open{background:var(--blue-dark);}
+  .ref-badge .ref-tooltip{
     display:none;position:absolute;z-index:50;
-    top:26px;left:50%;transform:translateX(-50%);
-    width:320px;max-width:70vw;
-    background:#2b2b2b;color:#fff;font-weight:400;font-style:normal;
-    font-size:12.5px;line-height:1.5;text-align:left;
+    top:24px;right:0;
+    width:300px;max-width:70vw;
+    background:#2b2b2b;color:#fff;font-weight:400;
+    font-size:12.5px;line-height:1.5;text-align:left;white-space:normal;
     padding:12px 14px;border-radius:10px;box-shadow:var(--shadow-lg);
-    white-space:pre-line;
   }
-  .info-icon .tooltip .ref-tag{
-    display:inline-block;background:var(--blue);color:#fff;font-weight:700;
-    font-size:10.5px;padding:2px 8px;border-radius:var(--radius-pill);margin-bottom:6px;
-  }
-  .info-icon:hover .tooltip, .info-icon.open .tooltip{display:block;}
+  .ref-badge:hover .ref-tooltip, .ref-badge.open .ref-tooltip{display:block;}
 
   .answers{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px;}
   .answers label{
@@ -208,26 +214,31 @@
   .answers input:checked + label.opt-partiel{background:var(--orange);}
   .answers input:checked + label.opt-na{background:var(--gray);}
 
-  .qcard-extra{margin-top:12px;border-top:1px dashed var(--border);padding-top:10px;}
-  .extra-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;font-size:13px;}
-  .extra-row:last-child{margin-bottom:0;}
-  .extra-row label.check-label{display:flex;align-items:center;gap:7px;cursor:pointer;font-weight:500;color:var(--text);white-space:nowrap;padding-top:6px;}
-  .extra-row input[type="checkbox"]{width:15px;height:15px;accent-color:var(--blue);}
-  .extra-row textarea, .extra-row input[type="text"]{
-    flex:1;font-family:inherit;font-size:13px;padding:8px 10px;
+  .qcard-extra{
+    margin-top:10px;border-top:1px dashed var(--border);padding-top:8px;
+    display:flex;gap:16px;flex-wrap:wrap;
+  }
+  .extra-col{flex:1;min-width:200px;display:flex;flex-direction:column;gap:5px;}
+  .extra-col .check-label{display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:500;font-size:12.5px;color:var(--text);}
+  .extra-col input[type="checkbox"]{width:14px;height:14px;accent-color:var(--blue);}
+  .extra-col textarea, .extra-col input[type="text"]{
+    font-family:inherit;font-size:12.5px;padding:6px 8px;
     border:1px solid var(--border);border-radius:8px;resize:vertical;color:var(--text);
     min-width:0;
   }
-  .extra-row textarea:focus, .extra-row input[type="text"]:focus{outline:none;border-color:var(--blue);}
-  .proof-block{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0;}
-  .proof-file-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-  .proof-file-row input[type="file"]{font-size:12px;flex:1;min-width:0;}
-  .file-chip{font-size:11.5px;background:var(--bg-soft-2);padding:4px 10px;border-radius:var(--radius-pill);color:var(--text-light);display:none;align-items:center;gap:6px;}
+  .extra-col textarea:focus, .extra-col input[type="text"]:focus{outline:none;border-color:var(--blue);}
+  .proof-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .proof-label{font-size:12.5px;font-weight:500;color:var(--text);margin-right:2px;}
+  .file-btn{
+    font-family:inherit;font-size:11px;font-weight:600;padding:3px 10px;border-radius:var(--radius-pill);
+    border:1px solid var(--border);background:#fff;color:var(--text-light);cursor:pointer;white-space:nowrap;
+  }
+  .file-btn:hover{border-color:var(--blue);color:var(--blue-dark);}
+  .file-chip{font-size:11px;background:var(--bg-soft-2);padding:3px 9px;border-radius:var(--radius-pill);color:var(--text-light);display:none;align-items:center;gap:5px;}
   .file-chip.show{display:inline-flex;}
   .file-chip a{color:var(--blue-dark);}
   .file-chip .rm{cursor:pointer;color:var(--red);font-weight:700;}
-  .field-icon{flex:none;width:15px;text-align:center;padding-top:8px;color:var(--text-light);font-size:13px;}
-  .upload-status{font-size:11px;color:var(--text-light);}
+  .upload-status{font-size:10.5px;color:var(--text-light);}
 
   /* ===== Analysis tab ===== */
   .analysis-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
@@ -257,6 +268,32 @@
   tr.row-na{background:var(--gray-bg);}
   tr.row-vide{background:#fff;}
   .chapter-sep td{background:var(--blue-darker)!important;color:#fff;font-weight:700;font-size:12.5px;padding:8px 12px;}
+  .cell-empty{color:var(--text-light);font-size:11.5px;}
+
+  .icon-badge{
+    position:relative;display:inline-flex;align-items:center;justify-content:center;
+    width:24px;height:24px;border-radius:50%;
+    background:var(--bg-soft-2);color:var(--blue-dark);
+    cursor:help;font-size:12px;text-decoration:none;
+  }
+  .icon-badge:hover, .icon-badge.open{background:var(--blue);color:#fff;}
+  a.icon-badge{cursor:pointer;}
+  .icon-badge .icon-tooltip{
+    display:none;position:absolute;z-index:60;
+    top:28px;left:50%;transform:translateX(-50%);
+    width:260px;max-width:60vw;
+    background:#2b2b2b;color:#fff;font-weight:400;
+    font-size:12px;line-height:1.5;text-align:left;white-space:normal;
+    padding:10px 12px;border-radius:8px;box-shadow:var(--shadow-lg);
+  }
+  .icon-badge:hover .icon-tooltip, .icon-badge.open .icon-tooltip{display:block;}
+  .crit-badge{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:var(--radius-pill);color:#fff;}
+  .crit-badge.crit-mineure{background:#c98a00;}
+  .crit-badge.crit-majeure{background:#c25700;}
+  .crit-badge.crit-critique{background:#b32020;}
+  .risk-ok{color:var(--green);font-weight:600;font-size:11.5px;}
+  .risk-ko{color:var(--red);font-weight:600;font-size:11.5px;}
+  .lock-note{font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-light);}
 
   /* ===== Stats tab ===== */
   .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:26px;}
@@ -300,6 +337,10 @@
       <p>Société Française de Pharmacie Oncologique · Référentiel ANSM 2023</p>
     </div>
     <div class="header-actions">
+      <div class="role-switch" id="roleSwitch">
+        <button type="button" class="role-btn active" data-role="membre">Membre SFPO</button>
+        <button type="button" class="role-btn" data-role="expert">Expert SFPO</button>
+      </div>
       <button class="btn ghost small" id="btnReset" type="button">Réinitialiser</button>
     </div>
   </div>
@@ -347,9 +388,9 @@
               <th>Question</th>
               <th>Réf. BPP</th>
               <th>Réponse</th>
-              <th>Criticité</th>
-              <th>Risque maîtrisé</th>
-              <th>Action à mettre en place</th>
+              <th id="th-crit">Criticité</th>
+              <th id="th-risk">Risque maîtrisé</th>
+              <th id="th-action">Action à mettre en place</th>
               <th>Commentaire</th>
               <th>Preuve</th>
             </tr>
@@ -395,6 +436,7 @@ let ALL_QUESTIONS = [];
 let TOTAL_QUESTIONS = 0;
 let EVALUATION_ID = null;
 let state = {}; // question_id -> response object (snake_case, mirrors API)
+let currentRole = 'membre'; // 'membre' | 'expert' — écran uniquement pour l'instant, pas d'authentification
 
 function defaultQState(){
   return {
@@ -546,8 +588,8 @@ function renderQuestionCard(q){
     <div class="qcard-top">
       <span class="qid-badge">${q.id}</span>
       <div class="qtext"><span class="code">${escapeHtml(q.code||'')}</span>${escapeHtml(q.question)}</div>
-      <span class="info-icon" tabindex="0">i
-        <span class="tooltip"><span class="ref-tag">BPP ${escapeHtml(q.ref||'')}</span><br>${escapeHtml(q.refText)}</span>
+      <span class="ref-badge" tabindex="0">BPP ${escapeHtml(q.ref||'')}
+        <span class="ref-tooltip">${escapeHtml(q.refText)}</span>
       </span>
     </div>
     <div class="answers">
@@ -557,23 +599,22 @@ function renderQuestionCard(q){
       `).join('')}
     </div>
     <div class="qcard-extra">
-      <div class="extra-row">
+      <div class="extra-col">
         <label class="check-label"><input type="checkbox" class="chk-comment" ${st.comment_actif?'checked':''}> Commentaire</label>
-        <textarea class="txt-comment" rows="1" placeholder="Ajouter un commentaire..." style="display:${st.comment_actif?'block':'none'}">${escapeHtml(st.commentaire)}</textarea>
+        <textarea class="txt-comment" rows="2" placeholder="Ajouter un commentaire..." style="display:${st.comment_actif?'block':'none'}">${escapeHtml(st.commentaire)}</textarea>
       </div>
-      <div class="extra-row">
-        <span class="field-icon">&#128206;</span>
-        <div class="proof-block">
-          <input type="text" class="txt-preuve" placeholder="Référence / description de la preuve (procédure, enregistrement, capture...)" value="${escapeHtml(st.preuve_texte)}">
-          <div class="proof-file-row">
-            <input type="file" class="file-preuve">
-            <span class="file-chip ${st.preuve_fichier_nom?'show':''}">
-              <a class="fname" href="${st.preuve_fichier_url||'#'}" target="_blank" rel="noopener">${st.preuve_fichier_nom?escapeHtml(st.preuve_fichier_nom):''}</a>
-              <span class="rm">&times;</span>
-            </span>
-            <span class="upload-status"></span>
-          </div>
+      <div class="extra-col">
+        <div class="proof-head">
+          <span class="proof-label">Preuve</span>
+          <button type="button" class="file-btn">&#128206; Joindre un fichier</button>
+          <input type="file" class="file-preuve" hidden>
+          <span class="file-chip ${st.preuve_fichier_nom?'show':''}">
+            <a class="fname" href="${st.preuve_fichier_url||'#'}" target="_blank" rel="noopener">${st.preuve_fichier_nom?escapeHtml(st.preuve_fichier_nom):''}</a>
+            <span class="rm">&times;</span>
+          </span>
         </div>
+        <input type="text" class="txt-preuve" placeholder="Référence / description de la preuve..." value="${escapeHtml(st.preuve_texte)}">
+        <span class="upload-status"></span>
       </div>
     </div>
   `;
@@ -604,9 +645,12 @@ function renderQuestionCard(q){
   txtP.addEventListener('input', ()=>{ st.preuve_texte = txtP.value; scheduleSave(q.id); });
 
   const fileInput = card.querySelector('.file-preuve');
+  const fileBtn = card.querySelector('.file-btn');
   const fileChip = card.querySelector('.file-chip');
   const fnameLink = card.querySelector('.fname');
   const uploadStatus = card.querySelector('.upload-status');
+
+  fileBtn.addEventListener('click', ()=>fileInput.click());
 
   fileInput.addEventListener('change', async ()=>{
     const f = fileInput.files[0];
@@ -645,9 +689,9 @@ function renderQuestionCard(q){
 }
 
 document.addEventListener('click', (e)=>{
-  const icon = e.target.closest ? e.target.closest('.info-icon') : null;
-  document.querySelectorAll('.info-icon.open').forEach(el=>{ if(el!==icon) el.classList.remove('open'); });
-  if(icon){ icon.classList.toggle('open'); }
+  const badge = e.target.closest ? e.target.closest('.ref-badge, .icon-badge:not(a)') : null;
+  document.querySelectorAll('.ref-badge.open, .icon-badge.open').forEach(el=>{ if(el!==badge) el.classList.remove('open'); });
+  if(badge){ badge.classList.toggle('open'); }
 });
 
 /* ======================= PROGRESS ======================= */
@@ -673,6 +717,10 @@ function criticiteLabel(c){
 
 function renderAnalysis(){
   const body = document.getElementById('analysisBody');
+  const isExpert = currentRole === 'expert';
+  document.getElementById('th-crit').innerHTML = 'Criticité' + (isExpert?'':' <span class="lock-note">🔒</span>');
+  document.getElementById('th-risk').innerHTML = 'Risque maîtrisé' + (isExpert?'':' <span class="lock-note">🔒</span>');
+  document.getElementById('th-action').innerHTML = 'Action à mettre en place' + (isExpert?'':' <span class="lock-note">🔒</span>');
   body.innerHTML = '';
   let lastChapter = null;
 
@@ -693,34 +741,54 @@ function renderAnalysis(){
     const pillClass = st.reponse ? 'pill-'+st.reponse : 'pill-vide';
     const pillLabel = st.reponse ? RESPONSE_LABELS[st.reponse] : '—';
 
-    let critCell = '<span style="color:var(--text-light);font-size:11.5px;">—</span>';
+    let critCell = '<span class="cell-empty">—</span>';
     if(st.reponse === 'non'){
-      critCell = `<select class="sel-crit" data-qid="${q.id}">
-        <option value="">Choisir...</option>
-        <option value="mineure" ${st.criticite==='mineure'?'selected':''}>Mineure</option>
-        <option value="majeure" ${st.criticite==='majeure'?'selected':''}>Majeure</option>
-        <option value="critique" ${st.criticite==='critique'?'selected':''}>Critique</option>
-      </select>`;
+      if(isExpert){
+        critCell = `<select class="sel-crit" data-qid="${q.id}">
+          <option value="">Choisir...</option>
+          <option value="mineure" ${st.criticite==='mineure'?'selected':''}>Mineure</option>
+          <option value="majeure" ${st.criticite==='majeure'?'selected':''}>Majeure</option>
+          <option value="critique" ${st.criticite==='critique'?'selected':''}>Critique</option>
+        </select>`;
+      } else {
+        critCell = st.criticite
+          ? `<span class="crit-badge crit-${st.criticite}">${criticiteLabel(st.criticite)}</span>`
+          : '<span class="cell-empty">Non qualifiée</span>';
+      }
     }
 
-    let riskCell = '<span style="color:var(--text-light);font-size:11.5px;">—</span>';
+    let riskCell = '<span class="cell-empty">—</span>';
     if(st.reponse === 'partiel'){
-      riskCell = `<select class="sel-risk" data-qid="${q.id}">
-        <option value="">Choisir...</option>
-        <option value="oui" ${st.risque_maitrise==='oui'?'selected':''}>Oui, acceptable</option>
-        <option value="non" ${st.risque_maitrise==='non'?'selected':''}>Non, à traiter</option>
-      </select>`;
+      if(isExpert){
+        riskCell = `<select class="sel-risk" data-qid="${q.id}">
+          <option value="">Choisir...</option>
+          <option value="oui" ${st.risque_maitrise==='oui'?'selected':''}>Oui, acceptable</option>
+          <option value="non" ${st.risque_maitrise==='non'?'selected':''}>Non, à traiter</option>
+        </select>`;
+      } else {
+        riskCell = st.risque_maitrise
+          ? `<span class="${st.risque_maitrise==='oui'?'risk-ok':'risk-ko'}">${st.risque_maitrise==='oui'?'Oui, acceptable':'Non, à traiter'}</span>`
+          : '<span class="cell-empty">Non qualifié</span>';
+      }
     }
 
-    let actionCell = '<span style="color:var(--text-light);font-size:11.5px;">—</span>';
+    let actionCell = '<span class="cell-empty">—</span>';
     if(st.reponse && st.reponse !== 'oui'){
-      actionCell = `<input type="text" class="txt-action" data-qid="${q.id}" placeholder="Action corrective..." value="${escapeHtml(st.action)}">`;
+      actionCell = isExpert
+        ? `<input type="text" class="txt-action" data-qid="${q.id}" placeholder="Action corrective..." value="${escapeHtml(st.action)}">`
+        : (st.action ? escapeHtml(st.action) : '<span class="cell-empty">—</span>');
     }
 
-    const proofBits = [];
-    if(st.preuve_texte) proofBits.push(escapeHtml(st.preuve_texte));
-    if(st.preuve_fichier_nom) proofBits.push('&#128206; <a href="'+st.preuve_fichier_url+'" target="_blank" rel="noopener">' + escapeHtml(st.preuve_fichier_nom) + '</a>');
-    const proofText = proofBits.length ? proofBits.join('<br>') : '<span style="color:var(--text-light);">—</span>';
+    const commentCell = (st.comment_actif && st.commentaire)
+      ? `<span class="icon-badge" tabindex="0">&#128172;<span class="icon-tooltip">${escapeHtml(st.commentaire)}</span></span>`
+      : '<span class="cell-empty">—</span>';
+
+    const proofParts = [];
+    if(st.preuve_texte) proofParts.push(escapeHtml(st.preuve_texte));
+    if(st.preuve_fichier_nom){
+      proofParts.push(`<a class="icon-badge" href="${st.preuve_fichier_url}" target="_blank" rel="noopener" title="${escapeHtml(st.preuve_fichier_nom)}">&#128206;</a>`);
+    }
+    const proofText = proofParts.length ? proofParts.join(' ') : '<span class="cell-empty">—</span>';
 
     tr.innerHTML = `
       <td><strong>${q.id}</strong></td>
@@ -731,7 +799,7 @@ function renderAnalysis(){
       <td>${critCell}</td>
       <td>${riskCell}</td>
       <td>${actionCell}</td>
-      <td>${st.comment_actif && st.commentaire ? escapeHtml(st.commentaire) : '<span style="color:var(--text-light);">—</span>'}</td>
+      <td>${commentCell}</td>
       <td>${proofText}</td>
     `;
     body.appendChild(tr);
@@ -758,22 +826,33 @@ function renderAnalysis(){
 }
 
 function exportCsv(){
-  const rows = [['N°','Chapitre','Sous-chapitre','Question','Réf BPP','Réponse','Criticité','Risque maîtrisé','Action','Commentaire','Preuve']];
+  const isExpert = currentRole === 'expert';
+  const headers = ['N°','Chapitre','Sous-chapitre','Question','Réf BPP','Réponse'];
+  if(isExpert) headers.push('Criticité','Risque maîtrisé','Action');
+  headers.push('Commentaire','Preuve');
+  const rows = [headers];
   ALL_QUESTIONS.forEach(q=>{
     const st = qState(q.id);
-    rows.push([
+    const row = [
       q.id,
       q.chapterNum + ' - ' + q.chapterTitle,
       q.subchapterNum + ' - ' + q.subchapterTitle,
       q.question,
       q.ref||'',
       st.reponse ? RESPONSE_LABELS[st.reponse] : '',
-      st.criticite ? criticiteLabel(st.criticite) : '',
-      st.risque_maitrise ? (st.risque_maitrise==='oui'?'Oui, acceptable':'Non, à traiter') : '',
-      st.action||'',
+    ];
+    if(isExpert){
+      row.push(
+        st.criticite ? criticiteLabel(st.criticite) : '',
+        st.risque_maitrise ? (st.risque_maitrise==='oui'?'Oui, acceptable':'Non, à traiter') : '',
+        st.action||''
+      );
+    }
+    row.push(
       (st.comment_actif ? st.commentaire : '') || '',
       (st.preuve_texte||'') + (st.preuve_fichier_nom ? ' [fichier: '+st.preuve_fichier_nom+']' : '')
-    ]);
+    );
+    rows.push(row);
   });
   const csv = rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(';')).join('\r\n');
   const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'});
@@ -935,6 +1014,16 @@ function switchTab(name){
 }
 document.querySelectorAll('.tab-btn').forEach(b=>{
   b.addEventListener('click', ()=>switchTab(b.dataset.tab));
+});
+
+/* ======================= ROLE SWITCH ======================= */
+document.querySelectorAll('.role-btn').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    currentRole = b.dataset.role;
+    document.querySelectorAll('.role-btn').forEach(x=>x.classList.toggle('active', x===b));
+    const activeTab = document.querySelector('.tab-btn.active').dataset.tab;
+    if(activeTab === 'analysis') renderAnalysis();
+  });
 });
 
 /* ======================= RESET ======================= */
