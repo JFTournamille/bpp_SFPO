@@ -152,13 +152,17 @@
   .chapter-head .chapter-progress{font-size:12px;opacity:.9;white-space:nowrap;}
 
   .subchapter{margin-bottom:18px;}
-  .subchapter h3{
+  .subchapter h3, h3.subchapter-title{
     font-size:13.5px;font-weight:700;color:var(--blue-dark);
     text-transform:uppercase;letter-spacing:.03em;
     margin:0 0 10px 4px;
     display:flex;align-items:center;gap:8px;
   }
   .subchapter h3 .num{color:var(--text-light);font-weight:600;}
+
+  /* sous-questions imbriquées (chapeau + enfants) */
+  .qchildren{margin:8px 0 12px 22px;padding-left:14px;border-left:2px solid var(--bg-soft-2);}
+  .sub-arrow{color:var(--text-light);margin-right:4px;}
 
   .qcard{
     background:#fff;border:1px solid var(--border);border-radius:var(--radius);
@@ -179,7 +183,8 @@
     padding:3px 9px;border-radius:var(--radius-pill);margin-top:1px;
   }
   .qtext{flex:1;font-size:14.5px;color:var(--text);}
-  .qtext .code{color:var(--text-light);font-weight:600;font-size:11.5px;margin-right:6px;}
+
+  .ref-badges{flex:none;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;}
 
   .ref-badge{
     flex:none;position:relative;display:inline-flex;align-items:center;
@@ -382,9 +387,9 @@
       <div class="table-scroll">
         <table class="analysis" id="analysisTable">
           <colgroup>
-            <col style="width:4%">
-            <col style="width:5%">
-            <col style="width:27%">
+            <col style="width:7%">
+            <col style="width:15%">
+            <col style="width:22%">
             <col style="width:6%">
             <col style="width:8%">
             <col style="width:11%">
@@ -396,7 +401,7 @@
           <thead>
             <tr>
               <th>N°</th>
-              <th>Chap.</th>
+              <th>Section</th>
               <th>Question</th>
               <th>Réf.</th>
               <th>Rép.</th>
@@ -443,12 +448,54 @@ const API = '/api';
 const RESPONSE_LABELS = {oui:'Oui', non:'Non', partiel:'Partiellement', na:'Non applicable'};
 const RESPONSE_POINTS = {oui:1, non:0, partiel:0.5};
 
-let CHAPTERS = [];
+let SECTIONS = [];
 let ALL_QUESTIONS = [];
-let TOTAL_QUESTIONS = 0;
+let QUESTION_BY_ID = {};
 let EVALUATION_ID = null;
 let state = {}; // question_id -> response object (snake_case, mirrors API)
 let currentRole = 'membre'; // 'membre' | 'expert' — écran uniquement pour l'instant, pas d'authentification
+
+/* Aplatit l'arbre de sections renvoyé par /api/questionnaire : associe à chaque
+   question son chapitre (section de niveau 1) et sa section immédiate, en conservant
+   l'ordre du document (questions propres à une section avant ses sous-sections). */
+function flattenQuestions(q, section, chapterNum, chapterTitle, sub, depth, out){
+  const flat = Object.assign({}, q, {
+    sectionId: section.id, sectionTitle: section.title,
+    chapterNum, chapterTitle,
+    subId: sub ? sub.id : null, subTitle: sub ? sub.title : null,
+    depth,
+  });
+  delete flat.children;
+  out.push(flat);
+  QUESTION_BY_ID[flat.id] = flat;
+  (q.children||[]).forEach(c=>flattenQuestions(c, section, chapterNum, chapterTitle, sub, depth+1, out));
+}
+function flattenSection(section, chapterNum, chapterTitle, sub, out){
+  section.questions.forEach(q=>flattenQuestions(q, section, chapterNum, chapterTitle, sub, 0, out));
+  section.sections.forEach(s=>flattenSection(s, chapterNum, chapterTitle, sub || {id:s.id, title:s.title}, out));
+}
+function buildAllQuestions(){
+  ALL_QUESTIONS = [];
+  QUESTION_BY_ID = {};
+  SECTIONS.forEach((ch, i)=>flattenSection(ch, i+1, ch.title, null, ALL_QUESTIONS));
+}
+
+/* Une question n'est visible que si sa condition de dépendance est remplie
+   (réponse attendue sur la question référencée) et que sa question chapeau
+   (le cas échéant) est elle-même visible. */
+function isVisible(q){
+  if(q.dependsOnQuestionId){
+    const dep = QUESTION_BY_ID[q.dependsOnQuestionId];
+    const depSt = dep ? qState(dep.id) : null;
+    if(!depSt || depSt.reponse !== q.dependsOnValue) return false;
+  }
+  if(q.parentQuestionId){
+    const parent = QUESTION_BY_ID[q.parentQuestionId];
+    if(parent && !isVisible(parent)) return false;
+  }
+  return true;
+}
+function visibleQuestions(){ return ALL_QUESTIONS.filter(isVisible); }
 
 function defaultQState(){
   return {
@@ -482,19 +529,8 @@ function setSaveIndicator(kind, text){
 /* ======================= INIT ======================= */
 async function init(){
   try{
-    CHAPTERS = await apiFetch('/questionnaire');
-    ALL_QUESTIONS = [];
-    CHAPTERS.forEach(ch=>{
-      ch.subchapters.forEach(sc=>{
-        sc.questions.forEach(q=>{
-          ALL_QUESTIONS.push(Object.assign({}, q, {
-            chapterNum: ch.num, chapterTitle: ch.title,
-            subchapterNum: sc.num, subchapterTitle: sc.title
-          }));
-        });
-      });
-    });
-    TOTAL_QUESTIONS = ALL_QUESTIONS.length;
+    SECTIONS = await apiFetch('/questionnaire');
+    buildAllQuestions();
 
     const evalInfo = await apiFetch('/evaluations/current');
     EVALUATION_ID = evalInfo.id;
@@ -511,6 +547,7 @@ async function init(){
     setSaveIndicator('saved', 'Synchronisé');
 
     renderQuestionnaire();
+    refreshVisibility();
     updateProgress();
     switchTab('questionnaire');
   }catch(err){
@@ -549,60 +586,101 @@ async function persist(qid){
 }
 
 /* ======================= RENDER: QUESTIONNAIRE ======================= */
+let QITEM_EL = {}; // question_id -> élément conteneur (carte + sous-questions), pour la visibilité conditionnelle
+
 function renderQuestionnaire(){
   const root = document.getElementById('tab-questionnaire');
   const navRoot = document.getElementById('chapterNav');
   root.innerHTML = '';
   navRoot.innerHTML = '';
+  QITEM_EL = {};
 
-  CHAPTERS.forEach(ch=>{
-    const chId = 'chap-' + ch.num.replace(/\./g,'-');
+  SECTIONS.forEach((ch, i)=>{
+    const chapterNum = i + 1;
+    const chId = 'chap-' + ch.id;
     const navA = document.createElement('a');
     navA.href = '#' + chId;
-    navA.innerHTML = '<span class="n">'+ch.num+'</span>' + escapeHtml(ch.title);
+    navA.innerHTML = '<span class="n">'+chapterNum+'</span>' + escapeHtml(ch.title);
     navRoot.appendChild(navA);
 
     const chBlock = document.createElement('div');
     chBlock.className = 'chapter-block';
     chBlock.id = chId;
 
-    const chQuestions = [];
-    ch.subchapters.forEach(sc=>chQuestions.push(...sc.questions));
-
-    chBlock.innerHTML = `
-      <div class="chapter-head">
-        <span class="num">${ch.num}</span>
-        <h2>${escapeHtml(ch.title)}</h2>
-        <span class="chapter-progress" data-chap="${ch.num}">0/${chQuestions.length}</span>
-      </div>
+    const head = document.createElement('div');
+    head.className = 'chapter-head';
+    head.innerHTML = `
+      <span class="num">${chapterNum}</span>
+      <h2>${escapeHtml(ch.title)}</h2>
+      <span class="chapter-progress" data-chap="${chapterNum}">0/0</span>
     `;
-
-    ch.subchapters.forEach(sc=>{
-      const scDiv = document.createElement('div');
-      scDiv.className = 'subchapter';
-      scDiv.innerHTML = `<h3><span class="num">${sc.num}</span> ${escapeHtml(sc.title)}</h3>`;
-      sc.questions.forEach(q=>scDiv.appendChild(renderQuestionCard(q)));
-      chBlock.appendChild(scDiv);
-    });
+    chBlock.appendChild(head);
+    renderSectionBody(ch, chBlock, 1);
 
     root.appendChild(chBlock);
   });
 }
 
-function renderQuestionCard(q){
+/* Rend récursivement le contenu d'une section (niveau >= 1) : ses questions propres,
+   puis ses sous-sections (dans l'ordre du référentiel d'origine). */
+function renderSectionBody(section, container, level){
+  if(level > 1){
+    const h = document.createElement('h3');
+    h.className = 'subchapter-title';
+    h.style.marginLeft = ((level-2) * 16) + 'px';
+    h.textContent = section.title;
+    container.appendChild(h);
+  }
+  if(section.questions.length){
+    const scDiv = document.createElement('div');
+    scDiv.className = 'subchapter';
+    section.questions.forEach(q=>scDiv.appendChild(buildQuestionItem(q, 0)));
+    container.appendChild(scDiv);
+  }
+  section.sections.forEach(s=>renderSectionBody(s, container, level+1));
+}
+
+/* Construit récursivement une question et ses sous-questions imbriquées. */
+function buildQuestionItem(q, depth){
+  const wrap = document.createElement('div');
+  wrap.className = 'qitem';
+  wrap.appendChild(renderQuestionCard(q, depth));
+  if(q.children && q.children.length){
+    const kids = document.createElement('div');
+    kids.className = 'qchildren';
+    q.children.forEach(c=>kids.appendChild(buildQuestionItem(c, depth+1)));
+    wrap.appendChild(kids);
+  }
+  QITEM_EL[q.id] = wrap;
+  return wrap;
+}
+
+function refreshVisibility(){
+  ALL_QUESTIONS.forEach(q=>{
+    const el = QITEM_EL[q.id];
+    if(el) el.style.display = isVisible(q) ? '' : 'none';
+  });
+}
+
+function renderQuestionCard(q, depth){
   const st = qState(q.id);
   const card = document.createElement('div');
-  card.className = 'qcard';
+  card.className = 'qcard' + (depth>0 ? ' sub' : '');
   card.id = 'q-' + q.id;
   card.dataset.qid = q.id;
 
+  const refs = (q.refs && q.refs.length) ? q.refs : (q.ref ? [q.ref] : []);
+  const refBadges = refs.length ? refs.map(r=>`
+    <span class="ref-badge" tabindex="0">BPP ${escapeHtml(r)}
+      <span class="ref-tooltip">${escapeHtml(q.refText)}</span>
+    </span>
+  `).join('') : '';
+
   card.innerHTML = `
     <div class="qcard-top">
-      <span class="qid-badge">${q.id}</span>
-      <div class="qtext"><span class="code">${escapeHtml(q.code||'')}</span>${escapeHtml(q.question)}</div>
-      <span class="ref-badge" tabindex="0">BPP ${escapeHtml(q.ref||'')}
-        <span class="ref-tooltip">${escapeHtml(q.refText)}</span>
-      </span>
+      <span class="qid-badge">${escapeHtml(q.code)}</span>
+      <div class="qtext">${depth>0?'<span class="sub-arrow">&#8627;</span>':''}${escapeHtml(q.question)}</div>
+      <span class="ref-badges">${refBadges}</span>
     </div>
     <div class="answers">
       ${['oui','non','partiel','na'].map(v=>`
@@ -639,6 +717,7 @@ function renderQuestionCard(q){
       card.classList.add('answered');
       card.dataset.reponse = r.value;
       scheduleSave(q.id);
+      refreshVisibility();
       updateProgress();
     });
   });
@@ -708,17 +787,24 @@ document.addEventListener('click', (e)=>{
 
 /* ======================= PROGRESS ======================= */
 function updateProgress(){
-  const answered = ALL_QUESTIONS.filter(q=>qState(q.id).reponse).length;
-  const pct = TOTAL_QUESTIONS ? Math.round(answered/TOTAL_QUESTIONS*100) : 0;
+  const visible = visibleQuestions();
+  const answered = visible.filter(q=>qState(q.id).reponse).length;
+  const total = visible.length;
+  const pct = total ? Math.round(answered/total*100) : 0;
   document.getElementById('progressFill').style.width = pct + '%';
-  document.getElementById('progressPct').textContent = answered + '/' + TOTAL_QUESTIONS + ' — ' + pct + '%';
+  document.getElementById('progressPct').textContent = answered + '/' + total + ' — ' + pct + '%';
 
-  CHAPTERS.forEach(ch=>{
-    const chQuestions = [];
-    ch.subchapters.forEach(sc=>chQuestions.push(...sc.questions));
-    const chAnswered = chQuestions.filter(q=>qState(q.id).reponse).length;
-    const el = document.querySelector('.chapter-progress[data-chap="'+ch.num+'"]');
-    if(el) el.textContent = chAnswered + '/' + chQuestions.length;
+  const byChapter = {};
+  visible.forEach(q=>{
+    byChapter[q.chapterNum] = byChapter[q.chapterNum] || {answered:0, total:0};
+    byChapter[q.chapterNum].total++;
+    if(qState(q.id).reponse) byChapter[q.chapterNum].answered++;
+  });
+  SECTIONS.forEach((ch, i)=>{
+    const chapterNum = i + 1;
+    const c = byChapter[chapterNum] || {answered:0, total:0};
+    const el = document.querySelector('.chapter-progress[data-chap="'+chapterNum+'"]');
+    if(el) el.textContent = c.answered + '/' + c.total;
   });
 }
 
@@ -736,7 +822,7 @@ function renderAnalysis(){
   body.innerHTML = '';
   let lastChapter = null;
 
-  ALL_QUESTIONS.forEach(q=>{
+  visibleQuestions().forEach(q=>{
     const st = qState(q.id);
 
     if(q.chapterNum !== lastChapter){
@@ -803,10 +889,10 @@ function renderAnalysis(){
     const proofText = proofParts.length ? proofParts.join(' ') : '<span class="cell-empty">—</span>';
 
     tr.innerHTML = `
-      <td><strong>${q.id}</strong></td>
-      <td>${q.subchapterNum}</td>
-      <td class="qtext-cell">${escapeHtml(q.question)}</td>
-      <td>${escapeHtml(q.ref||'')}</td>
+      <td><strong>${escapeHtml(q.code)}</strong></td>
+      <td>${escapeHtml(q.sectionTitle)}</td>
+      <td class="qtext-cell">${q.depth>0?'&#8627; ':''}${escapeHtml(q.question)}</td>
+      <td>${escapeHtml((q.refs&&q.refs.length?q.refs:[q.ref||'']).join(', '))}</td>
       <td><span class="pill ${pillClass}">${pillLabel}</span></td>
       <td>${critCell}</td>
       <td>${riskCell}</td>
@@ -839,18 +925,18 @@ function renderAnalysis(){
 
 function exportCsv(){
   const isExpert = currentRole === 'expert';
-  const headers = ['N°','Chapitre','Sous-chapitre','Question','Réf BPP','Réponse'];
+  const headers = ['N°','Chapitre','Section','Question','Réf BPP','Réponse'];
   if(isExpert) headers.push('Criticité','Risque maîtrisé','Action');
   headers.push('Commentaire','Preuve');
   const rows = [headers];
-  ALL_QUESTIONS.forEach(q=>{
+  visibleQuestions().forEach(q=>{
     const st = qState(q.id);
     const row = [
-      q.id,
+      q.code,
       q.chapterNum + ' - ' + q.chapterTitle,
-      q.subchapterNum + ' - ' + q.subchapterTitle,
-      q.question,
-      q.ref||'',
+      q.sectionTitle,
+      (q.depth>0?'↳ ':'') + q.question,
+      (q.refs&&q.refs.length?q.refs:[q.ref||'']).join(', '),
       st.reponse ? RESPONSE_LABELS[st.reponse] : '',
     ];
     if(isExpert){
@@ -904,15 +990,16 @@ function computeScore(questions){
 }
 
 function renderStats(){
-  const globalScore = computeScore(ALL_QUESTIONS);
+  const visible = visibleQuestions();
+  const globalScore = computeScore(visible);
 
   const counts = {oui:0, non:0, partiel:0, na:0, vide:0};
-  ALL_QUESTIONS.forEach(q=>{
+  visible.forEach(q=>{
     const r = qState(q.id).reponse;
     counts[r || 'vide']++;
   });
   const critCounts = {mineure:0, majeure:0, critique:0, nonclassee:0};
-  ALL_QUESTIONS.forEach(q=>{
+  visible.forEach(q=>{
     const st = qState(q.id);
     if(st.reponse === 'non'){
       if(st.criticite) critCounts[st.criticite]++;
@@ -946,27 +1033,33 @@ function renderStats(){
 
   const barsRoot = document.getElementById('statsBars');
   barsRoot.innerHTML = '';
-  CHAPTERS.forEach(ch=>{
-    const chQuestions = [];
-    ch.subchapters.forEach(sc=>chQuestions.push(...sc.questions));
+  SECTIONS.forEach((ch, i)=>{
+    const chapterNum = i + 1;
+    const chQuestions = visible.filter(q=>q.chapterNum===chapterNum);
     const s = computeScore(chQuestions);
     const row = document.createElement('div');
     row.className = 'bar-row';
     const pct = s.pct;
     row.innerHTML = `
-      <div class="bname">${ch.num} — ${escapeHtml(ch.title)}</div>
+      <div class="bname">${chapterNum} — ${escapeHtml(ch.title)}</div>
       <div class="btrack"><div class="bfill" style="width:${pct||0}%;background:${pct!==null?barColor(pct):'var(--border)'}"></div></div>
       <div class="bscore" style="color:${pct!==null?barColor(pct):'var(--text-light)'}">${pct!==null?pct+'%':'n/a'}</div>
     `;
     barsRoot.appendChild(row);
 
-    ch.subchapters.forEach(sc=>{
-      const ss = computeScore(sc.questions);
+    const subIds = [];
+    const subSeen = {};
+    chQuestions.forEach(q=>{
+      if(q.subId && !subSeen[q.subId]){ subSeen[q.subId]=true; subIds.push({id:q.subId, title:q.subTitle}); }
+    });
+    subIds.forEach(sub=>{
+      const subQuestions = chQuestions.filter(q=>q.subId===sub.id);
+      const ss = computeScore(subQuestions);
       const srow = document.createElement('div');
       srow.className = 'bar-row';
       srow.style.opacity = '0.85';
       srow.innerHTML = `
-        <div class="bname" style="padding-left:16px;font-weight:400;">${sc.num} ${escapeHtml(sc.title)}</div>
+        <div class="bname" style="padding-left:16px;font-weight:400;">${escapeHtml(sub.title)}</div>
         <div class="btrack" style="height:12px;"><div class="bfill" style="width:${ss.pct||0}%;background:${ss.pct!==null?barColor(ss.pct):'var(--border)'}"></div></div>
         <div class="bscore" style="font-size:11.5px;color:${ss.pct!==null?barColor(ss.pct):'var(--text-light)'}">${ss.pct!==null?ss.pct+'%':'n/a'}</div>
       `;
@@ -975,7 +1068,7 @@ function renderStats(){
   });
 
   const bd = document.getElementById('statsBreakdown');
-  const total = ALL_QUESTIONS.length;
+  const total = visible.length;
   const items = [
     {k:'oui', label:'Oui', color:'var(--green)'},
     {k:'non', label:'Non', color:'var(--red)'},
@@ -1045,6 +1138,7 @@ document.getElementById('btnReset').addEventListener('click', async ()=>{
     await apiFetch(`/evaluations/${EVALUATION_ID}/responses`, {method:'DELETE'});
     ALL_QUESTIONS.forEach(q=>{ state[q.id] = defaultQState(); });
     renderQuestionnaire();
+    refreshVisibility();
     updateProgress();
     setSaveIndicator('saved', 'Réinitialisé');
   }catch(err){

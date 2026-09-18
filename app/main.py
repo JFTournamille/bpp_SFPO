@@ -20,37 +20,43 @@ app = FastAPI(title="Auto-évaluation BPP - API")
 
 
 # ------------------------------------------------------------------
-# Référentiel (chapitres / sous-chapitres / questions)
+# Référentiel (sections imbriquées / questions, avec sous-questions et dépendances)
 # ------------------------------------------------------------------
 @app.get("/api/questionnaire")
 def get_questionnaire():
-    chapters = fetch_all("SELECT num, title FROM chapters ORDER BY sort_order")
-    subchapters = fetch_all("SELECT num, chapter_num, title FROM subchapters ORDER BY sort_order")
+    sections = fetch_all("SELECT id, parent_id, title, level FROM sections ORDER BY sort_order")
     questions = fetch_all(
-        "SELECT id, idx, code, subchapter_num, question, ref, ref_text AS \"refText\" "
+        "SELECT id, code, section_id, parent_question_id AS \"parentQuestionId\", question, "
+        "ref, ref_text AS \"refText\", refs, "
+        "depends_on_question_id AS \"dependsOnQuestionId\", depends_on_value AS \"dependsOnValue\" "
         "FROM questions ORDER BY sort_order"
     )
 
-    sub_by_chapter = {}
-    for sc in subchapters:
-        sub_by_chapter.setdefault(sc["chapter_num"], []).append(
-            {"num": sc["num"], "title": sc["title"], "questions": []}
-        )
-
-    q_by_subchapter = {}
+    q_by_id = {}
     for q in questions:
-        q_by_subchapter.setdefault(q["subchapter_num"], []).append(
-            {k: v for k, v in q.items() if k != "subchapter_num"}
-        )
+        q["refs"] = [r.strip() for r in (q["refs"] or "").split(",") if r.strip()]
+        q["children"] = []
+        q_by_id[q["id"]] = q
 
-    result = []
-    for ch in chapters:
-        scs = sub_by_chapter.get(ch["num"], [])
-        for sc in scs:
-            sc["questions"] = q_by_subchapter.get(sc["num"], [])
-        result.append({"num": ch["num"], "title": ch["title"], "subchapters": scs})
+    top_by_section = {}
+    for q in questions:
+        parent_id = q.pop("parentQuestionId")
+        section_id = q.pop("section_id")
+        if parent_id and parent_id in q_by_id:
+            q_by_id[parent_id]["children"].append(q)
+        else:
+            top_by_section.setdefault(section_id, []).append(q)
 
-    return result
+    children_by_parent = {}
+    for s in sections:
+        s["questions"] = top_by_section.get(s["id"], [])
+        children_by_parent.setdefault(s["parent_id"], []).append(s)
+
+    for s in sections:
+        s["sections"] = children_by_parent.get(s["id"], [])
+        s.pop("parent_id")
+
+    return children_by_parent.get(None, [])
 
 
 # ------------------------------------------------------------------

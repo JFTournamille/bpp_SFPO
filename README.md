@@ -129,12 +129,23 @@ uvicorn app.main:app --reload --port 8000
 
 ## Modèle de données
 
-- `chapters` / `subchapters` / `questions` — référentiel BPP (généré depuis le
-  fichier Excel fourni, 45 questions réparties sur 2 chapitres).
+- `sections` — référentiel BPP, arborescence à profondeur variable (chapitre >
+  section > sous-section > ...), générée depuis le fichier Excel fourni
+  (1263 questions réparties sur 12 chapitres).
+- `questions` — une question par ligne du référentiel, avec :
+  - `section_id` : la section à laquelle elle est directement attachée ;
+  - `parent_question_id` : la question "chapeau" dont elle est une sous-question
+    (imbrication déduite du code Excel, ex. `Q198` → `Q198.02` → `Q198.02.01`) ;
+  - `depends_on_question_id` / `depends_on_value` : la question n'est affichée
+    que si la question référencée a reçu la réponse indiquée (ex. n'afficher
+    `Q022` que si `Q021` = "oui") ;
+  - `ref` / `ref_text` : première réf. BPP citée et texte officiel affiché au
+    survol ; `refs` : toutes les réf. BPP associées (une bulle par réf.).
 - `evaluations` — une campagne d'auto-évaluation (une seule aujourd'hui, id=1,
   créée automatiquement).
 - `responses` — une ligne par question répondue (réponse, commentaire, preuve,
-  criticité, risque maîtrisé, action corrective).
+  criticité, risque maîtrisé, action corrective). Les questions masquées par une
+  dépendance non remplie ne comptent pas dans la progression ni les statistiques.
 
 ## Sécurité
 
