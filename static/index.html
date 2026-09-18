@@ -126,9 +126,12 @@
     font-size:11.5px;padding:5px 12px;border-radius:var(--radius-pill);
     background:var(--bg-soft-2);color:var(--text-light);text-decoration:none;
     border:1px solid transparent;
+    display:inline-flex;align-items:center;gap:5px;max-width:190px;
   }
   .chapter-nav a:hover{border-color:var(--blue);color:var(--blue-dark);}
-  .chapter-nav a .n{font-weight:700;color:var(--blue-dark);margin-right:3px;}
+  .chapter-nav a .n{flex:none;font-weight:700;color:var(--blue-dark);margin-right:1px;}
+  .chapter-nav a .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .chapter-nav a .p{flex:none;font-size:10px;font-weight:700;color:var(--text-light);}
 
   main{padding:26px 0 80px;}
 
@@ -600,7 +603,8 @@ function renderQuestionnaire(){
     const chId = 'chap-' + ch.id;
     const navA = document.createElement('a');
     navA.href = '#' + chId;
-    navA.innerHTML = '<span class="n">'+chapterNum+'</span>' + escapeHtml(ch.title);
+    navA.title = ch.title;
+    navA.innerHTML = `<span class="n">${chapterNum}</span><span class="t">${escapeHtml(ch.title)}</span><span class="p" data-chap-nav="${chapterNum}"></span>`;
     navRoot.appendChild(navA);
 
     const chBlock = document.createElement('div');
@@ -805,6 +809,8 @@ function updateProgress(){
     const c = byChapter[chapterNum] || {answered:0, total:0};
     const el = document.querySelector('.chapter-progress[data-chap="'+chapterNum+'"]');
     if(el) el.textContent = c.answered + '/' + c.total;
+    const navEl = document.querySelector('.p[data-chap-nav="'+chapterNum+'"]');
+    if(navEl) navEl.textContent = c.answered + '/' + c.total;
   });
 }
 
