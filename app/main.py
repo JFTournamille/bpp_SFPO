@@ -4,11 +4,14 @@ import unicodedata
 import uuid
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import Depends, FastAPI, HTTPException, Request, Response, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
+from app import auth
+from app.admin import router as admin_router
+from app.auth import current_user, current_user_any, require_expert
 from app.db import fetch_all, fetch_one, execute
 from app.migrations import run_migrations
 
@@ -21,6 +24,7 @@ app = FastAPI(title="Auto-évaluation BPP - API")
 
 try:
     run_migrations()
+    auth.ensure_bootstrap_expert()
 except Exception:  # base injoignable au démarrage : l'API répondra en erreur, migrations retentées au prochain démarrage
     import logging
     logging.getLogger("uvicorn.error").exception("Migrations non appliquées")
@@ -30,7 +34,7 @@ except Exception:  # base injoignable au démarrage : l'API répondra en erreur,
 # Référentiel (sections imbriquées / questions, avec sous-questions et dépendances)
 # ------------------------------------------------------------------
 @app.get("/api/questionnaire")
-def get_questionnaire():
+def get_questionnaire(user: dict = Depends(current_user)):
     sections = fetch_all("SELECT id, parent_id, title, level FROM sections ORDER BY sort_order")
     questions = fetch_all(
         "SELECT id, code, section_id, parent_question_id AS \"parentQuestionId\", question, "
@@ -67,21 +71,114 @@ def get_questionnaire():
 
 
 # ------------------------------------------------------------------
-# Évaluations
+# Authentification
 # ------------------------------------------------------------------
-@app.get("/api/evaluations/current")
-def get_current_evaluation():
-    row = fetch_one("SELECT id, label, created_at FROM evaluations ORDER BY id LIMIT 1")
-    if row:
-        return row
-    execute("INSERT INTO evaluations (id, label) VALUES (1, 'Auto-évaluation BPP') ON CONFLICT (id) DO NOTHING")
-    return fetch_one("SELECT id, label, created_at FROM evaluations WHERE id = 1")
+class LoginBody(BaseModel):
+    login: str
+    password: str
 
 
-def _ensure_evaluation(evaluation_id: int):
-    row = fetch_one("SELECT id FROM evaluations WHERE id = %s", (evaluation_id,))
-    if not row:
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
+
+def _me_json(user: dict):
+    return {
+        "id": user["id"], "login": user["login"], "role": user["role"], "nom": user["nom"],
+        "centre_id": user["centre_id"], "centre_libelle": user["centre_libelle"],
+        "must_change_password": user["must_change_password"],
+    }
+
+
+@app.post("/api/auth/login")
+def login(body: LoginBody, request: Request, response: Response):
+    user = auth.authenticate(body.login, body.password)
+    auth.open_session(response, request, user["id"])
+    me = fetch_one(
+        "SELECT u.id, u.login, u.role, u.nom, u.centre_id, u.must_change_password, c.libelle AS centre_libelle "
+        "FROM users u LEFT JOIN centres c ON c.id = u.centre_id WHERE u.id = %s", (user["id"],))
+    return _me_json(me)
+
+
+@app.post("/api/auth/logout")
+def logout(request: Request, response: Response):
+    auth.close_session(response, request)
+    return {"ok": True}
+
+
+@app.get("/api/auth/me")
+def me(user: dict = Depends(current_user_any)):
+    return _me_json(user)
+
+
+@app.post("/api/auth/password")
+def change_password(body: PasswordChange, user: dict = Depends(current_user_any)):
+    row = fetch_one("SELECT password_hash FROM users WHERE id = %s", (user["id"],))
+    if not auth.verify_password(body.current_password, row["password_hash"]):
+        raise HTTPException(status_code=403, detail="Mot de passe actuel incorrect")
+    auth.check_password_policy(body.new_password)
+    if body.new_password == body.current_password:
+        raise HTTPException(status_code=422, detail="Le nouveau mot de passe doit être différent de l'actuel")
+    execute("UPDATE users SET password_hash = %s, must_change_password = FALSE WHERE id = %s",
+            (auth.hash_password(body.new_password), user["id"]))
+    return {"ok": True}
+
+
+# ------------------------------------------------------------------
+# Évaluations (une ou plusieurs campagnes par centre)
+# ------------------------------------------------------------------
+EVAL_SELECT = (
+    "SELECT e.id, e.label, e.created_at, e.status, e.completed_at, e.centre_id, c.libelle AS centre_libelle "
+    "FROM evaluations e LEFT JOIN centres c ON c.id = e.centre_id "
+)
+
+
+def _get_evaluation(evaluation_id: int, user: dict, write: bool = False) -> dict:
+    """Contrôle d'accès : un membre n'accède qu'aux évaluations de son centre, et ne peut plus
+    les modifier une fois terminées ; un expert accède à tout (y compris pour l'expertise après clôture)."""
+    ev = fetch_one(EVAL_SELECT + "WHERE e.id = %s", (evaluation_id,))
+    if not ev:
         raise HTTPException(status_code=404, detail="Évaluation introuvable")
+    if user["role"] != "expert":
+        if ev["centre_id"] is None or ev["centre_id"] != user["centre_id"]:
+            raise HTTPException(status_code=404, detail="Évaluation introuvable")
+        if write and ev["status"] == "termine":
+            raise HTTPException(status_code=409, detail="Questionnaire terminé : modification impossible")
+    return ev
+
+
+@app.get("/api/evaluations/current")
+def get_current_evaluation(user: dict = Depends(current_user)):
+    """Questionnaire de travail du membre : la dernière campagne de son centre (créée si besoin)."""
+    if user["role"] == "expert":
+        raise HTTPException(status_code=400, detail="Un expert ouvre un questionnaire depuis le tableau de bord")
+    if not user["centre_id"]:
+        raise HTTPException(status_code=409, detail="Votre compte n'est rattaché à aucun centre. Contactez un expert SFPO.")
+    ev = fetch_one(EVAL_SELECT + "WHERE e.centre_id = %s ORDER BY e.id DESC LIMIT 1", (user["centre_id"],))
+    if ev:
+        return ev
+    execute("INSERT INTO evaluations (label, centre_id) VALUES ('Auto-évaluation BPP', %s)", (user["centre_id"],))
+    return fetch_one(EVAL_SELECT + "WHERE e.centre_id = %s ORDER BY e.id DESC LIMIT 1", (user["centre_id"],))
+
+
+@app.get("/api/evaluations/{evaluation_id}")
+def get_evaluation(evaluation_id: int, user: dict = Depends(current_user)):
+    return _get_evaluation(evaluation_id, user)
+
+
+@app.post("/api/evaluations/{evaluation_id}/complete")
+def complete_evaluation(evaluation_id: int, user: dict = Depends(current_user)):
+    _get_evaluation(evaluation_id, user, write=True)
+    execute("UPDATE evaluations SET status = 'termine', completed_at = now() WHERE id = %s", (evaluation_id,))
+    return _get_evaluation(evaluation_id, user)
+
+
+@app.post("/api/evaluations/{evaluation_id}/reopen")
+def reopen_evaluation(evaluation_id: int, user: dict = Depends(require_expert)):
+    _get_evaluation(evaluation_id, user)
+    execute("UPDATE evaluations SET status = 'en_cours', completed_at = NULL WHERE id = %s", (evaluation_id,))
+    return _get_evaluation(evaluation_id, user)
 
 
 RESPONSE_COLUMNS = (
@@ -105,8 +202,8 @@ def _row_to_json(row):
 
 
 @app.get("/api/evaluations/{evaluation_id}/responses")
-def get_responses(evaluation_id: int):
-    _ensure_evaluation(evaluation_id)
+def get_responses(evaluation_id: int, user: dict = Depends(current_user)):
+    _get_evaluation(evaluation_id, user)
     rows = fetch_all(f"SELECT {RESPONSE_COLUMNS} FROM responses WHERE evaluation_id = %s", (evaluation_id,))
     return {row["question_id"]: _row_to_json(row) for row in rows}
 
@@ -127,8 +224,9 @@ ALLOWED_RISQUE = {None, "oui", "non"}
 
 
 @app.put("/api/evaluations/{evaluation_id}/responses/{question_id}")
-def upsert_response(evaluation_id: int, question_id: str, body: ResponseUpdate):
-    _ensure_evaluation(evaluation_id)
+def upsert_response(evaluation_id: int, question_id: str, body: ResponseUpdate,
+                    user: dict = Depends(current_user)):
+    _get_evaluation(evaluation_id, user, write=True)
     if not fetch_one("SELECT id FROM questions WHERE id = %s", (question_id,)):
         raise HTTPException(status_code=404, detail="Question inconnue")
     if body.reponse not in ALLOWED_REPONSE:
@@ -137,6 +235,14 @@ def upsert_response(evaluation_id: int, question_id: str, body: ResponseUpdate):
         raise HTTPException(status_code=422, detail="Criticité invalide")
     if body.risque_maitrise not in ALLOWED_RISQUE:
         raise HTTPException(status_code=422, detail="Valeur de risque maîtrisé invalide")
+
+    if user["role"] != "expert":
+        # criticité / risque / action relèvent de l'expertise : un membre ne peut pas les modifier
+        prev = fetch_one("SELECT criticite, risque_maitrise, action FROM responses "
+                         "WHERE evaluation_id=%s AND question_id=%s", (evaluation_id, question_id))
+        body.criticite = prev["criticite"] if prev else None
+        body.risque_maitrise = prev["risque_maitrise"] if prev else None
+        body.action = prev["action"] if prev else ""
 
     execute(
         """
@@ -164,8 +270,8 @@ def upsert_response(evaluation_id: int, question_id: str, body: ResponseUpdate):
 
 
 @app.delete("/api/evaluations/{evaluation_id}/responses")
-def reset_responses(evaluation_id: int):
-    _ensure_evaluation(evaluation_id)
+def reset_responses(evaluation_id: int, user: dict = Depends(require_expert)):
+    _get_evaluation(evaluation_id, user)
     rows = fetch_all(
         "SELECT preuve_fichier_chemin FROM responses WHERE evaluation_id = %s AND preuve_fichier_chemin IS NOT NULL",
         (evaluation_id,),
@@ -193,8 +299,9 @@ def _delete_upload_file(rel_path: str):
 
 
 @app.post("/api/evaluations/{evaluation_id}/responses/{question_id}/file")
-async def upload_proof_file(evaluation_id: int, question_id: str, file: UploadFile = File(...)):
-    _ensure_evaluation(evaluation_id)
+async def upload_proof_file(evaluation_id: int, question_id: str, file: UploadFile = File(...),
+                            user: dict = Depends(current_user)):
+    _get_evaluation(evaluation_id, user, write=True)
     if not fetch_one("SELECT id FROM questions WHERE id = %s", (question_id,)):
         raise HTTPException(status_code=404, detail="Question inconnue")
 
@@ -232,8 +339,8 @@ async def upload_proof_file(evaluation_id: int, question_id: str, file: UploadFi
 
 
 @app.delete("/api/evaluations/{evaluation_id}/responses/{question_id}/file")
-def delete_proof_file(evaluation_id: int, question_id: str):
-    _ensure_evaluation(evaluation_id)
+def delete_proof_file(evaluation_id: int, question_id: str, user: dict = Depends(current_user)):
+    _get_evaluation(evaluation_id, user, write=True)
     row = fetch_one(
         "SELECT preuve_fichier_chemin FROM responses WHERE evaluation_id=%s AND question_id=%s",
         (evaluation_id, question_id),
@@ -255,7 +362,21 @@ def health():
 
 
 # ------------------------------------------------------------------
-# Fichiers uploadés (preuves) + frontend statique
+# Fichiers uploadés (preuves) — servis uniquement aux personnes ayant accès à l'évaluation
 # ------------------------------------------------------------------
-app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+@app.get("/uploads/{evaluation_id}/{rel_path:path}")
+def get_upload(evaluation_id: int, rel_path: str, user: dict = Depends(current_user)):
+    _get_evaluation(evaluation_id, user)
+    base = os.path.abspath(os.path.join(UPLOAD_DIR, str(evaluation_id)))
+    full_path = os.path.abspath(os.path.join(base, rel_path))
+    if os.path.commonpath([full_path, base]) != base or not os.path.isfile(full_path):
+        raise HTTPException(status_code=404, detail="Fichier introuvable")
+    return FileResponse(full_path)
+
+
+app.include_router(admin_router)
+
+# ------------------------------------------------------------------
+# Frontend statique
+# ------------------------------------------------------------------
 app.mount("/", StaticFiles(directory="static", html=True), name="static")

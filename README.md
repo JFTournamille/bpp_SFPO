@@ -21,6 +21,8 @@ Un seul conteneur CapRover sert à la fois :
 
 ```
 app/main.py         API FastAPI (questionnaire, réponses, upload de preuves)
+app/auth.py         Authentification provisoire (login/mot de passe, sessions) — à remplacer par le SSO SFPO
+app/admin.py        Espace expert (tableau de bord, centres, comptes)
 app/db.py           Connexion PostgreSQL (pool psycopg2)
 static/index.html    Page web (Auto-évaluation / Analyse & Expertise / Statistiques)
 static/assets/       Logo SFPO
@@ -74,6 +76,10 @@ Dans l'app créée :
 
 - **App Configs → Environmental Variables**
   - `DATABASE_URL` = `postgresql://postgres:<mot_de_passe>@srv-captain--bpp-db:5432/postgres`
+  - `ADMIN_LOGIN` = identifiant du compte expert initial (défaut : `expert`)
+  - `ADMIN_PASSWORD` = son mot de passe initial. Utilisé **uniquement** si aucun compte n'existe
+    encore ; le changement est imposé à la première connexion. S'il est absent, un mot de passe
+    provisoire aléatoire est généré et affiché dans les logs de l'app.
   - (`UPLOAD_DIR` est déjà fixé à `/app/uploads` dans le Dockerfile, inutile de le redéfinir sauf besoin spécifique)
 
 - **App Configs → Persistent Directories** (important — sans ça, les preuves
@@ -140,6 +146,37 @@ CapRover et la migration est retentée au démarrage suivant.
 Pour ajouter une évolution : créer `migrations/002_xxx.sql` (idéalement
 idempotent), puis redéployer.
 
+## Comptes, centres et questionnaires
+
+En attendant le branchement du SSO SFPO, l'accès se fait par identifiant / mot
+de passe :
+
+- **Expert** : administre l'outil. Au premier déploiement, un compte expert
+  initial est créé (`ADMIN_LOGIN` / `ADMIN_PASSWORD`). Depuis l'onglet
+  *Tableau de bord*, un expert :
+  - suit tous les questionnaires (centre, statut en cours / terminé,
+    progression, non-conformités restant à qualifier, dernière activité) ;
+  - crée les comptes **membres** (et d'autres experts) et les rattache à un
+    centre. Un mot de passe provisoire est généré et affiché une seule fois,
+    avec un message prêt à copier pour l'envoyer ; la personne choisit son mot
+    de passe à la première connexion. Un expert peut aussi régénérer un mot de
+    passe ou désactiver un compte ;
+  - gère le référentiel des **centres** (≈1 300 établissements importés depuis
+    l'export SFPO, identifiants conservés) : recherche, ajout, modification ;
+  - ouvre n'importe quel questionnaire, en **vue expert** (qualification des
+    écarts) ou en **vue membre** (simulation de ce que voit le centre), avec
+    bascule dans le bandeau du questionnaire ;
+  - crée une nouvelle campagne pour un centre, rouvre un questionnaire terminé.
+- **Membre** : voit uniquement le questionnaire de son centre (la dernière
+  campagne, créée automatiquement à sa première connexion). Il le marque
+  comme terminé une fois rempli, après quoi il ne peut plus le modifier.
+  Criticité, risque maîtrisé et action corrective restent réservés aux experts
+  (contrôlé côté serveur).
+
+Le questionnaire qui existait avant cette évolution apparaît dans le tableau de
+bord comme « Sans centre (historique) » : bouton *Rattacher* pour l'affecter à
+un centre.
+
 ## Parcours de l'audit
 
 L'onglet *Auto-évaluation* propose deux modes (bascule en haut de page), avec
@@ -166,14 +203,24 @@ mémorisés dans le navigateur.
     `Q022` que si `Q021` = "oui") ;
   - `ref` / `ref_text` : première réf. BPP citée et texte officiel affiché au
     survol ; `refs` : toutes les réf. BPP associées (une bulle par réf.).
-- `evaluations` — une campagne d'auto-évaluation (une seule aujourd'hui, id=1,
-  créée automatiquement).
+- `centres` — établissements (référentiel SFPO).
+- `users` — comptes expert / membre (mot de passe haché PBKDF2), centre de
+  rattachement ; `sessions` — sessions de connexion (cookie HttpOnly, 7 jours).
+- `evaluations` — une campagne d'auto-évaluation par centre (plusieurs
+  possibles dans le temps), avec son statut (`en_cours` / `termine`).
 - `responses` — une ligne par question répondue (réponse, commentaire, preuve,
   criticité, risque maîtrisé, action corrective). Les questions masquées par une
   dépendance non remplie ne comptent pas dans la progression ni les statistiques.
 
 ## Sécurité
 
-Choix assumé : **pas d'authentification**. Quiconque accède à l'URL peut
-répondre au questionnaire. À garder en tête si l'URL venait à être partagée
-au-delà de l'usage interne prévu.
+- Toutes les routes de l'API et les preuves téléversées exigent une session.
+  Un membre n'accède qu'aux questionnaires de son centre.
+- Mots de passe hachés (PBKDF2-SHA256), 10 caractères minimum, changement
+  imposé pour tout mot de passe provisoire ; blocage 15 min après 5 échecs sur
+  un même identifiant.
+- Activez **HTTPS / Force HTTPS** dans CapRover : le cookie de session est alors
+  marqué `Secure`.
+- Authentification provisoire : le jour du SSO SFPO, seul `app/auth.py` (et
+  l'écran de connexion) est à remplacer ; les rôles et rattachements aux
+  centres restent gérés dans l'application.
