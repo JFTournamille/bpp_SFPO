@@ -446,6 +446,7 @@
   .modal{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow-lg);padding:24px 26px;width:100%;max-width:520px;max-height:90vh;overflow:auto;}
   .modal h3{margin:0 0 14px;font-size:16px;}
   .modal .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+  .cred-mail{border:1px solid var(--border);border-radius:10px;padding:4px 16px;background:#fff;}
   .cred-box{background:var(--bg-soft);border-radius:10px;padding:12px 14px;font-size:13px;white-space:pre-wrap;font-family:ui-monospace,Menlo,monospace;}
 
   /* ===== Travail à plusieurs ===== */
@@ -2040,11 +2041,25 @@ function showCredentials(res){
   openModal(`<h3>Identifiants — ${isExpert ? 'accès Expert / administrateur' : 'accès Membre'}</h3>
     ${mailStatus}
     <p class="form-note">${res.email_sent ? 'Copie du message envoyé' : 'Copiez ce message maintenant'} : le mot de passe provisoire ne sera plus affiché ensuite.</p>
-    <div class="cred-box" id="credText">${escapeHtml(res.message)}</div>
-    <div class="modal-actions"><button class="btn ghost" id="btnCopyCred">Copier</button><button class="btn primary" data-close>Fermer</button></div>`);
+    <div class="cred-mail" id="credText">${res.message_html}</div>
+    <div class="modal-actions"><button class="btn ghost" id="btnCopyCred">Copier le message</button><button class="btn primary" data-close>Fermer</button></div>`);
+  // copie « riche » : collé dans Outlook / Gmail, l'adresse reste un lien cliquable
   document.getElementById('btnCopyCred').addEventListener('click', async (e)=>{
-    try{ await navigator.clipboard.writeText(res.message); e.target.textContent = 'Copié ✓'; }
-    catch(err){ e.target.textContent = 'Copie impossible : sélectionnez le texte'; }
+    const btn = e.target;
+    try{
+      if(!window.ClipboardItem) throw new Error('ClipboardItem indisponible');
+      await navigator.clipboard.write([new ClipboardItem({
+        'text/html': new Blob([res.message_html], {type:'text/html'}),
+        'text/plain': new Blob([res.message], {type:'text/plain'}),
+      })]);
+      btn.textContent = 'Copié ✓';
+    }catch(err){
+      const range = document.createRange();
+      range.selectNodeContents(document.getElementById('credText'));
+      const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+      btn.textContent = document.execCommand('copy') ? 'Copié ✓' : 'Sélectionnez le texte et copiez-le (Ctrl/Cmd+C)';
+      sel.removeAllRanges();
+    }
   });
 }
 

@@ -169,12 +169,14 @@ def _credentials(request: Request, user_id: int, password: str, is_new: bool, se
     """Message d'identifiants (affiché une seule fois à l'expert) et envoi éventuel par e-mail."""
     u = fetch_one("SELECT u.login, u.nom, u.email, u.role, c.libelle AS centre FROM users u "
                   "LEFT JOIN centres c ON c.id = u.centre_id WHERE u.id = %s", (user_id,))
-    message = mailer.credentials_message(nom=u["nom"], login=u["login"], password=password, role=u["role"],
-                                         centre=u["centre"] or "", is_new=is_new, url=mailer.app_url(request))
+    args = dict(nom=u["nom"], login=u["login"], password=password, role=u["role"],
+                centre=u["centre"] or "", is_new=is_new, url=mailer.app_url(request))
+    message = mailer.credentials_message(**args)
+    message_html = mailer.credentials_html(**args)
     result = {"login": u["login"], "password": password, "role": u["role"], "email": u["email"],
-              "message": message, "email_sent": False, "email_error": None}
+              "message": message, "message_html": message_html, "email_sent": False, "email_error": None}
     if send_email:
-        result.update(mailer.try_send_credentials(u["email"], message))
+        result.update(mailer.try_send_credentials(u["email"], message, message_html))
     return result
 
 

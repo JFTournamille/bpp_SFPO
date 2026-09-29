@@ -7,6 +7,7 @@ Configuration par variables d'environnement (CapRover → App Configs) :
   APP_URL : adresse publique de l'outil citée dans les messages (défaut : déduite de la requête).
 Sans SMTP_HOST, l'envoi est désactivé : l'expert copie le message et l'envoie lui-même.
 """
+import html
 import os
 import smtplib
 import ssl
@@ -31,8 +32,7 @@ def app_url(request: Request) -> str:
     return f"{proto}://{host}"
 
 
-def credentials_message(*, nom: str, login: str, password: str, role: str, centre: str,
-                        is_new: bool, url: str) -> str:
+def _credentials_parts(*, nom, login, password, role, centre, is_new):
     is_expert = role == "expert"
     acces = "accès Expert / administrateur" if is_expert else "accès Membre"
     if is_expert:
@@ -41,21 +41,58 @@ def credentials_message(*, nom: str, login: str, password: str, role: str, centr
     else:
         perimetre = ("Cet accès Membre vous permet de remplir le questionnaire d'auto-évaluation de votre centre"
                      + (f" ({centre})." if centre else "."))
-    intro = (f"Un {acces} à l'outil d'auto-évaluation BPP de la SFPO a été créé pour vous.\n{perimetre}"
-             if is_new else
-             f"Le mot de passe de votre {acces} à l'outil d'auto-évaluation BPP de la SFPO a été réinitialisé.")
+    if is_new:
+        intro = [f"Un {acces} à l'outil d'auto-évaluation BPP de la SFPO a été créé pour vous.", perimetre]
+    else:
+        intro = [f"Le mot de passe de votre {acces} à l'outil d'auto-évaluation BPP de la SFPO a été réinitialisé."]
+    fields = [
+        ("Type d'accès", "Expert / administrateur" if is_expert else "Membre"),
+        ("Identifiant", login),
+        ("Mot de passe provisoire", password),
+    ]
+    return f"Bonjour{' ' + nom if nom else ''},", intro, fields
+
+
+LINK_LABEL = "Accéder à l'outil d'auto-évaluation BPP"
+OUTRO = "Vous devrez choisir un mot de passe personnel à la première connexion."
+SIGNATURE = "Société Française de Pharmacie Oncologique"
+
+
+def credentials_message(*, nom: str, login: str, password: str, role: str, centre: str,
+                        is_new: bool, url: str) -> str:
+    """Version texte brut (e-mail sans HTML, copie simple)."""
+    hello, intro, fields = _credentials_parts(nom=nom, login=login, password=password, role=role,
+                                              centre=centre, is_new=is_new)
+    lines = [hello, "", *intro, "", f"Adresse : {url}"]
+    lines += [f"{k} : {v}" for k, v in fields]
+    lines += ["", OUTRO, "", SIGNATURE]
+    return "\n".join(lines)
+
+
+def credentials_html(*, nom: str, login: str, password: str, role: str, centre: str,
+                     is_new: bool, url: str) -> str:
+    """Version HTML : l'adresse est un lien cliquable (un antispam qui réécrit les liens ne
+    modifie que sa destination, le texte affiché reste lisible)."""
+    e = html.escape
+    hello, intro, fields = _credentials_parts(nom=nom, login=login, password=password, role=role,
+                                              centre=centre, is_new=is_new)
+    rows = "".join(
+        f'<tr><td style="padding:2px 12px 2px 0;color:#48525c">{e(k)}</td>'
+        f'<td style="padding:2px 0"><strong>{e(v)}</strong></td></tr>' for k, v in fields
+    )
     return (
-        f"Bonjour{' ' + nom if nom else ''},\n\n{intro}\n\n"
-        f"Adresse : {url}\n"
-        f"Type d'accès : {'Expert / administrateur' if is_expert else 'Membre'}\n"
-        f"Identifiant : {login}\n"
-        f"Mot de passe provisoire : {password}\n\n"
-        "Vous devrez choisir un mot de passe personnel à la première connexion.\n\n"
-        "Société Française de Pharmacie Oncologique"
+        '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#1c2126;line-height:1.5">'
+        f"<p>{e(hello)}</p>"
+        f"<p>{'<br>'.join(e(x) for x in intro)}</p>"
+        f'<p><a href="{e(url, quote=True)}" style="color:#A22E7D;font-weight:bold">{e(LINK_LABEL)}</a></p>'
+        f'<table style="border-collapse:collapse;font-size:14px">{rows}</table>'
+        f"<p>{e(OUTRO)}</p>"
+        f'<p style="color:#48525c">{e(SIGNATURE)}</p>'
+        "</div>"
     )
 
 
-def send_mail(to: str, subject: str, body: str):
+def send_mail(to: str, subject: str, body: str, html_body: str = None):
     """Envoie un e-mail texte ; lève une exception en cas d'échec (message lisible pour l'expert)."""
     host = os.environ["SMTP_HOST"]
     security = os.environ.get("SMTP_SECURITY", "starttls").lower()
@@ -70,6 +107,8 @@ def send_mail(to: str, subject: str, body: str):
     msg["To"] = to
     msg["Message-ID"] = make_msgid(domain=sender.split("@")[-1] if "@" in sender else None)
     msg.set_content(body)
+    if html_body:
+        msg.add_alternative(html_body, subtype="html")
 
     context = ssl.create_default_context()
     if security == "ssl":
@@ -89,14 +128,14 @@ def send_mail(to: str, subject: str, body: str):
             pass
 
 
-def try_send_credentials(to: str, body: str) -> dict:
+def try_send_credentials(to: str, body: str, html_body: str = None) -> dict:
     """Tente l'envoi ; ne lève jamais : renvoie {'email_sent': bool, 'email_error': str|None}."""
     if not to:
         return {"email_sent": False, "email_error": "Aucune adresse e-mail renseignée pour ce compte"}
     if not smtp_configured():
         return {"email_sent": False, "email_error": "Envoi d'e-mails non configuré sur le serveur"}
     try:
-        send_mail(to, SUBJECT, body)
+        send_mail(to, SUBJECT, body, html_body)
         return {"email_sent": True, "email_error": None}
     except Exception as exc:  # SMTP injoignable, authentification refusée, adresse rejetée...
         return {"email_sent": False, "email_error": f"Échec de l'envoi : {exc}"}
