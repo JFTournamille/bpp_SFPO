@@ -6,6 +6,7 @@ from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, UploadFile, File
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
@@ -21,6 +22,8 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 Mo
 
 app = FastAPI(title="Auto-évaluation BPP - API")
+# le référentiel complet (/api/questionnaire) pèse ~1 Mo en JSON : ~110 Ko une fois compressé
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 try:
     run_migrations()
