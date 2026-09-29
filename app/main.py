@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from app import auth
 from app.admin import router as admin_router
 from app.auth import current_user, current_user_any, require_expert
-from app.db import fetch_all, fetch_one, execute
+from app.db import fetch_all, fetch_one, execute, execute_returning
 from app.migrations import run_migrations
 
 UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "/app/uploads")
@@ -185,9 +185,16 @@ def reopen_evaluation(evaluation_id: int, user: dict = Depends(require_expert)):
 
 
 RESPONSE_COLUMNS = (
-    "question_id, reponse, comment_actif, commentaire, preuve_texte, "
-    "preuve_fichier_nom, preuve_fichier_chemin, criticite, risque_maitrise, action"
+    "r.question_id, r.reponse, r.comment_actif, r.commentaire, r.preuve_texte, "
+    "r.preuve_fichier_nom, r.preuve_fichier_chemin, r.criticite, r.risque_maitrise, r.action, "
+    "r.version, r.updated_at, COALESCE(NULLIF(u.nom, ''), u.login) AS updated_by_nom"
 )
+RESPONSE_FROM = "FROM responses r LEFT JOIN users u ON u.id = r.updated_by "
+
+
+def _fetch_response(evaluation_id: int, question_id: str):
+    return fetch_one(f"SELECT {RESPONSE_COLUMNS} {RESPONSE_FROM} WHERE r.evaluation_id=%s AND r.question_id=%s",
+                     (evaluation_id, question_id))
 
 
 def _row_to_json(row):
@@ -201,13 +208,17 @@ def _row_to_json(row):
         "criticite": row["criticite"],
         "risque_maitrise": row["risque_maitrise"],
         "action": row["action"],
+        # travail à plusieurs : version (détection des modifications concurrentes) et dernier auteur
+        "version": row["version"],
+        "updated_at": row["updated_at"].isoformat() if row["updated_at"] else None,
+        "updated_by_nom": row["updated_by_nom"],
     }
 
 
 @app.get("/api/evaluations/{evaluation_id}/responses")
 def get_responses(evaluation_id: int, user: dict = Depends(current_user)):
     _get_evaluation(evaluation_id, user)
-    rows = fetch_all(f"SELECT {RESPONSE_COLUMNS} FROM responses WHERE evaluation_id = %s", (evaluation_id,))
+    rows = fetch_all(f"SELECT {RESPONSE_COLUMNS} {RESPONSE_FROM} WHERE r.evaluation_id = %s", (evaluation_id,))
     return {row["question_id"]: _row_to_json(row) for row in rows}
 
 
@@ -219,6 +230,8 @@ class ResponseUpdate(BaseModel):
     criticite: Optional[str] = None
     risque_maitrise: Optional[str] = None
     action: str = ""
+    # version de la réponse sur laquelle l'utilisateur travaillait (None : pas de contrôle)
+    base_version: Optional[int] = None
 
 
 ALLOWED_REPONSE = {None, "oui", "non", "partiel", "na"}
@@ -247,11 +260,13 @@ def upsert_response(evaluation_id: int, question_id: str, body: ResponseUpdate,
         body.risque_maitrise = prev["risque_maitrise"] if prev else None
         body.action = prev["action"] if prev else ""
 
-    execute(
+    # Mise à jour refusée si quelqu'un d'autre a modifié la réponse depuis que l'utilisateur l'a chargée
+    # (plusieurs membres d'un même centre peuvent travailler en même temps sur le questionnaire).
+    saved = execute_returning(
         """
         INSERT INTO responses (evaluation_id, question_id, reponse, comment_actif, commentaire,
-                                preuve_texte, criticite, risque_maitrise, action, updated_at)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, now())
+                                preuve_texte, criticite, risque_maitrise, action, updated_at, updated_by, version)
+        VALUES (%(e)s, %(q)s, %(rep)s, %(ca)s, %(com)s, %(pt)s, %(crit)s, %(risk)s, %(act)s, now(), %(uid)s, 1)
         ON CONFLICT (evaluation_id, question_id) DO UPDATE SET
             reponse = EXCLUDED.reponse,
             comment_actif = EXCLUDED.comment_actif,
@@ -260,15 +275,24 @@ def upsert_response(evaluation_id: int, question_id: str, body: ResponseUpdate,
             criticite = EXCLUDED.criticite,
             risque_maitrise = EXCLUDED.risque_maitrise,
             action = EXCLUDED.action,
-            updated_at = now()
+            updated_at = now(),
+            updated_by = EXCLUDED.updated_by,
+            version = responses.version + 1
+        WHERE %(base)s::int IS NULL OR responses.version = %(base)s::int
+        RETURNING version
         """,
-        (
-            evaluation_id, question_id, body.reponse, body.comment_actif, body.commentaire,
-            body.preuve_texte, body.criticite, body.risque_maitrise, body.action,
-        ),
+        {
+            "e": evaluation_id, "q": question_id, "rep": body.reponse, "ca": body.comment_actif,
+            "com": body.commentaire, "pt": body.preuve_texte, "crit": body.criticite,
+            "risk": body.risque_maitrise, "act": body.action, "uid": user["id"], "base": body.base_version,
+        },
     )
-    row = fetch_one(f"SELECT {RESPONSE_COLUMNS} FROM responses WHERE evaluation_id=%s AND question_id=%s",
-                     (evaluation_id, question_id))
+    row = _fetch_response(evaluation_id, question_id)
+    if not saved:
+        raise HTTPException(status_code=409, detail={
+            "message": "Réponse modifiée entre-temps par une autre personne",
+            "current": _row_to_json(row),
+        })
     return _row_to_json(row)
 
 
@@ -329,16 +353,19 @@ async def upload_proof_file(evaluation_id: int, question_id: str, file: UploadFi
 
     execute(
         """
-        INSERT INTO responses (evaluation_id, question_id, preuve_fichier_nom, preuve_fichier_chemin, updated_at)
-        VALUES (%s, %s, %s, %s, now())
+        INSERT INTO responses (evaluation_id, question_id, preuve_fichier_nom, preuve_fichier_chemin,
+                               updated_at, updated_by, version)
+        VALUES (%s, %s, %s, %s, now(), %s, 1)
         ON CONFLICT (evaluation_id, question_id) DO UPDATE SET
             preuve_fichier_nom = EXCLUDED.preuve_fichier_nom,
             preuve_fichier_chemin = EXCLUDED.preuve_fichier_chemin,
-            updated_at = now()
+            updated_at = now(),
+            updated_by = EXCLUDED.updated_by,
+            version = responses.version + 1
         """,
-        (evaluation_id, question_id, file.filename, rel_path),
+        (evaluation_id, question_id, file.filename, rel_path, user["id"]),
     )
-    return {"preuve_fichier_nom": file.filename, "preuve_fichier_url": f"/uploads/{rel_path}"}
+    return _row_to_json(_fetch_response(evaluation_id, question_id))
 
 
 @app.delete("/api/evaluations/{evaluation_id}/responses/{question_id}/file")
@@ -351,11 +378,12 @@ def delete_proof_file(evaluation_id: int, question_id: str, user: dict = Depends
     if row and row["preuve_fichier_chemin"]:
         _delete_upload_file(row["preuve_fichier_chemin"])
     execute(
-        "UPDATE responses SET preuve_fichier_nom=NULL, preuve_fichier_chemin=NULL, updated_at=now() "
-        "WHERE evaluation_id=%s AND question_id=%s",
-        (evaluation_id, question_id),
+        "UPDATE responses SET preuve_fichier_nom=NULL, preuve_fichier_chemin=NULL, updated_at=now(), "
+        "updated_by=%s, version=version+1 WHERE evaluation_id=%s AND question_id=%s",
+        (user["id"], evaluation_id, question_id),
     )
-    return {"ok": True}
+    row = _fetch_response(evaluation_id, question_id)
+    return _row_to_json(row) if row else {"ok": True}
 
 
 @app.get("/api/health")
