@@ -3,15 +3,20 @@ import os
 import shutil
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
-from app import auth
+from app import auth, mailer
 from app.rgpd import ACCOUNT_RETENTION_YEARS, EVALUATION_RETENTION_YEARS
 from app.auth import require_expert
 from app.db import execute, execute_returning, fetch_all, fetch_one
 
 router = APIRouter(prefix="/api/admin", dependencies=[Depends(require_expert)])
+
+
+@router.get("/config")
+def config():
+    return {"smtp": mailer.smtp_configured()}
 
 
 # ------------------------------------------------------------------
@@ -156,6 +161,26 @@ class UserCreate(BaseModel):
     nom: str = ""
     email: str = ""
     centre_id: Optional[int] = None
+    send_email: bool = False
+
+
+class PasswordReset(BaseModel):
+    send_email: bool = False
+
+
+def _credentials(request: Request, user_id: int, password: str, is_new: bool, send_email: bool) -> dict:
+    """Message d'identifiants (affiché une seule fois à l'expert) et envoi éventuel par e-mail."""
+    u = fetch_one("SELECT u.login, u.nom, u.email, u.role, c.libelle AS centre FROM users u "
+                  "LEFT JOIN centres c ON c.id = u.centre_id WHERE u.id = %s", (user_id,))
+    args = dict(nom=u["nom"], login=u["login"], password=password, role=u["role"],
+                centre=u["centre"] or "", is_new=is_new, url=mailer.app_url(request))
+    message = mailer.credentials_message(**args)
+    message_html = mailer.credentials_html(**args)
+    result = {"login": u["login"], "password": password, "role": u["role"], "email": u["email"],
+              "message": message, "message_html": message_html, "email_sent": False, "email_error": None}
+    if send_email:
+        result.update(mailer.try_send_credentials(u["email"], message, message_html))
+    return result
 
 
 class UserUpdate(BaseModel):
@@ -178,7 +203,7 @@ def list_users():
 
 
 @router.post("/users")
-def create_user(body: UserCreate):
+def create_user(body: UserCreate, request: Request):
     login = body.login.strip().lower()
     if not login or " " in login:
         raise HTTPException(status_code=422, detail="Identifiant invalide (pas d'espace)")
@@ -189,13 +214,13 @@ def create_user(body: UserCreate):
     if fetch_one("SELECT id FROM users WHERE login = %s", (login,)):
         raise HTTPException(status_code=409, detail="Identifiant déjà utilisé")
     password = auth.generate_password()
-    execute(
+    new = execute_returning(
         "INSERT INTO users (login, password_hash, role, nom, email, centre_id, must_change_password) "
-        "VALUES (%s, %s, %s, %s, %s, %s, TRUE)",
+        "VALUES (%s, %s, %s, %s, %s, %s, TRUE) RETURNING id",
         (login, auth.hash_password(password), body.role, body.nom.strip(), body.email.strip(), body.centre_id),
     )
     # le mot de passe provisoire n'est renvoyé qu'une fois, pour être transmis à la personne
-    return {"login": login, "password": password}
+    return _credentials(request, new["id"], password, is_new=True, send_email=body.send_email)
 
 
 @router.patch("/users/{user_id}")
@@ -227,15 +252,14 @@ def update_user(user_id: int, body: UserUpdate, me: dict = Depends(require_exper
 
 
 @router.post("/users/{user_id}/reset-password")
-def reset_password(user_id: int):
-    row = fetch_one("SELECT login FROM users WHERE id = %s", (user_id,))
-    if not row:
+def reset_password(user_id: int, request: Request, body: Optional[PasswordReset] = None):
+    if not fetch_one("SELECT id FROM users WHERE id = %s", (user_id,)):
         raise HTTPException(status_code=404, detail="Compte introuvable")
     password = auth.generate_password()
     execute("UPDATE users SET password_hash = %s, must_change_password = TRUE WHERE id = %s",
             (auth.hash_password(password), user_id))
     execute("DELETE FROM sessions WHERE user_id = %s", (user_id,))
-    return {"login": row["login"], "password": password}
+    return _credentials(request, user_id, password, is_new=False, send_email=bool(body and body.send_email))
 
 
 
