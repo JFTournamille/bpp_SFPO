@@ -196,6 +196,35 @@ Le questionnaire qui existait avant cette évolution apparaît dans le tableau d
 bord comme « Sans centre (historique) » : bouton *Rattacher* pour l'affecter à
 un centre.
 
+## Données personnelles (RGPD)
+
+À la première connexion (après le choix du mot de passe), chaque utilisateur
+doit lire la mention d'information RGPD propre à l'outil et cocher la case
+d'acquittement, qui l'engage aussi à ne saisir aucune donnée patient. Tant que
+ce n'est pas fait, l'API refuse tout accès au questionnaire (contrôle côté
+serveur, pas seulement à l'écran).
+
+- Le texte et sa version sont définis dans `app/rgpd.py` (source unique, servi
+  par `/api/rgpd`). Il complète la politique RGPD générale de la SFPO, à
+  laquelle il renvoie.
+- L'acquittement est stocké sur le compte : `users.rgpd_version` et
+  `users.rgpd_acknowledged_at`, visibles dans *Tableau de bord → Comptes*
+  (colonne RGPD).
+- **Modifier la mention** : éditer `RGPD_HTML` et changer `RGPD_VERSION` dans
+  `app/rgpd.py`. Chaque utilisateur devra alors acquitter la nouvelle version à
+  sa connexion suivante. Le dernier acquittement est porté par le compte ; la
+  table `rgpd_acknowledgements` garde l'historique de toutes les versions
+  acquittées (bouton *Historique RGPD* sur chaque compte).
+- **Purge (durées de conservation)** : *Tableau de bord → Comptes → Purge RGPD*
+  liste les comptes sans connexion depuis plus de 3 ans et les auto-évaluations
+  clôturées depuis plus de 5 ans (durées définies dans `app/rgpd.py`, reprises
+  dans la mention). La suppression, définitive (réponses et fichiers de preuve
+  compris), n'a lieu qu'après confirmation par un expert ; le compte de l'expert
+  qui lance la purge n'est jamais supprimé. À lancer périodiquement (ex. une
+  fois par an).
+- La mention reste consultable à tout moment via le lien *Données
+  personnelles* en pied de page.
+
 ## Parcours de l'audit
 
 L'onglet *Auto-évaluation* propose deux modes (bascule en haut de page), avec

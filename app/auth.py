@@ -16,6 +16,7 @@ from typing import Optional
 from fastapi import Depends, HTTPException, Request, Response
 
 from app.db import execute, fetch_one
+from app.rgpd import RGPD_VERSION
 
 log = logging.getLogger("uvicorn.error")
 
@@ -126,7 +127,8 @@ def _user_from_request(request: Request) -> Optional[dict]:
     if not token:
         return None
     return fetch_one(
-        "SELECT u.id, u.login, u.role, u.nom, u.email, u.centre_id, u.must_change_password, c.libelle AS centre_libelle "
+        "SELECT u.id, u.login, u.role, u.nom, u.email, u.centre_id, u.must_change_password, u.rgpd_version, "
+        "c.libelle AS centre_libelle "
         "FROM sessions s JOIN users u ON u.id = s.user_id LEFT JOIN centres c ON c.id = u.centre_id "
         "WHERE s.token = %s AND s.expires_at > now() AND u.active",
         (token,),
@@ -141,9 +143,15 @@ def current_user_any(request: Request) -> dict:
     return user
 
 
+def must_acknowledge_rgpd(user: dict) -> bool:
+    return user.get("rgpd_version") != RGPD_VERSION
+
+
 def current_user(user: dict = Depends(current_user_any)) -> dict:
     if user["must_change_password"]:
         raise HTTPException(status_code=403, detail="Changement de mot de passe requis")
+    if must_acknowledge_rgpd(user):
+        raise HTTPException(status_code=403, detail="Acquittement de la mention RGPD requis")
     return user
 
 

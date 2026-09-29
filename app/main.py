@@ -10,7 +10,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from app import auth
+from app import auth, rgpd
 from app.admin import router as admin_router
 from app.auth import current_user, current_user_any, require_expert
 from app.db import fetch_all, fetch_one, execute, execute_returning
@@ -91,6 +91,7 @@ def _me_json(user: dict):
         "id": user["id"], "login": user["login"], "role": user["role"], "nom": user["nom"],
         "centre_id": user["centre_id"], "centre_libelle": user["centre_libelle"],
         "must_change_password": user["must_change_password"],
+        "must_acknowledge_rgpd": auth.must_acknowledge_rgpd(user),
     }
 
 
@@ -99,8 +100,8 @@ def login(body: LoginBody, request: Request, response: Response):
     user = auth.authenticate(body.login, body.password)
     auth.open_session(response, request, user["id"])
     me = fetch_one(
-        "SELECT u.id, u.login, u.role, u.nom, u.centre_id, u.must_change_password, c.libelle AS centre_libelle "
-        "FROM users u LEFT JOIN centres c ON c.id = u.centre_id WHERE u.id = %s", (user["id"],))
+        "SELECT u.id, u.login, u.role, u.nom, u.centre_id, u.must_change_password, u.rgpd_version, "
+        "c.libelle AS centre_libelle FROM users u LEFT JOIN centres c ON c.id = u.centre_id WHERE u.id = %s", (user["id"],))
     return _me_json(me)
 
 
@@ -125,6 +126,28 @@ def change_password(body: PasswordChange, user: dict = Depends(current_user_any)
         raise HTTPException(status_code=422, detail="Le nouveau mot de passe doit être différent de l'actuel")
     execute("UPDATE users SET password_hash = %s, must_change_password = FALSE WHERE id = %s",
             (auth.hash_password(body.new_password), user["id"]))
+    return {"ok": True}
+
+
+class RgpdAck(BaseModel):
+    version: str
+
+
+@app.get("/api/rgpd")
+def get_rgpd_notice():
+    """Mention d'information RGPD en vigueur (consultable sans connexion)."""
+    return rgpd.notice()
+
+
+@app.post("/api/auth/rgpd")
+def acknowledge_rgpd(body: RgpdAck, user: dict = Depends(current_user_any)):
+    """Enregistre sur le compte l'acquittement de la mention (version + horodatage)."""
+    if body.version != rgpd.RGPD_VERSION:
+        # la mention a changé entre l'affichage et la validation : la faire relire
+        raise HTTPException(status_code=409, detail="La mention a été mise à jour, merci de la relire")
+    execute("UPDATE users SET rgpd_version = %s, rgpd_acknowledged_at = now() WHERE id = %s",
+            (rgpd.RGPD_VERSION, user["id"]))
+    execute("INSERT INTO rgpd_acknowledgements (user_id, version) VALUES (%s, %s)", (user["id"], rgpd.RGPD_VERSION))
     return {"ok": True}
 
 
