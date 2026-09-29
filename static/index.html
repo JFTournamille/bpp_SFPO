@@ -1854,7 +1854,7 @@ document.getElementById('btnNewUser').addEventListener('click', ()=>{
         nom: document.getElementById('uNom').value, email: document.getElementById('uEmail').value,
         centre_id: picker.value(),
       }));
-      showCredentials(res, document.getElementById('uNom').value, picker.label(), true);
+      showCredentials(res, document.getElementById('uNom').value, picker.label(), role, true);
       loadUsers();
     }catch(err){ document.getElementById('modalError').textContent = err.message; }
   });
@@ -1881,18 +1881,24 @@ function editUser(u){
 
 async function resetUserPassword(u){
   if(!confirm(`Générer un nouveau mot de passe provisoire pour ${u.login} ? L'ancien ne fonctionnera plus.`)) return;
-  try{ showCredentials(await apiFetch(`/admin/users/${u.id}/reset-password`, {method:'POST'}), u.nom, u.centre_libelle, false); loadUsers(); }
+  try{ showCredentials(await apiFetch(`/admin/users/${u.id}/reset-password`, {method:'POST'}), u.nom, u.centre_libelle, u.role, false); loadUsers(); }
   catch(err){ alert(err.message); }
 }
 
 /* Affiche les identifiants à transmettre (une seule fois : le mot de passe n'est pas stocké en clair) */
-function showCredentials(res, nom, centre, isNew){
+function showCredentials(res, nom, centre, role, isNew){
+  const isExpert = role === 'expert';
+  const acces = isExpert ? 'accès Expert / administrateur' : 'accès Membre';
+  const perimetre = isExpert
+    ? `Cet accès Expert / administrateur vous permet de consulter et d'expertiser les questionnaires de tous les centres, et de gérer les centres et les comptes utilisateurs.`
+    : `Cet accès Membre vous permet de remplir le questionnaire d'auto-évaluation de votre centre${centre ? ' (' + centre + ')' : ''}.`;
   const text = `Bonjour${nom ? ' ' + nom : ''},\n\n` +
-    (isNew ? `Un accès à l'outil d'auto-évaluation BPP de la SFPO a été créé pour vous${centre ? ' (' + centre + ')' : ''}.\n\n`
-           : `Votre mot de passe d'accès à l'outil d'auto-évaluation BPP de la SFPO a été réinitialisé.\n\n`) +
-    `Adresse : ${location.origin}\nIdentifiant : ${res.login}\nMot de passe provisoire : ${res.password}\n\n` +
+    (isNew ? `Un ${acces} à l'outil d'auto-évaluation BPP de la SFPO a été créé pour vous.\n${perimetre}\n\n`
+           : `Le mot de passe de votre ${acces} à l'outil d'auto-évaluation BPP de la SFPO a été réinitialisé.\n\n`) +
+    `Adresse : ${location.origin}\nType d'accès : ${isExpert ? 'Expert / administrateur' : 'Membre'}\n` +
+    `Identifiant : ${res.login}\nMot de passe provisoire : ${res.password}\n\n` +
     `Vous devrez choisir un mot de passe personnel à la première connexion.`;
-  openModal(`<h3>Identifiants à transmettre</h3>
+  openModal(`<h3>Identifiants à transmettre — ${isExpert ? 'accès Expert / administrateur' : 'accès Membre'}</h3>
     <p class="form-note">Copiez ce message maintenant : le mot de passe provisoire ne sera plus affiché ensuite.</p>
     <div class="cred-box" id="credText">${escapeHtml(text)}</div>
     <div class="modal-actions"><button class="btn ghost" id="btnCopyCred">Copier</button><button class="btn primary" data-close>Fermer</button></div>`);
