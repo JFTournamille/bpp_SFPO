@@ -7,6 +7,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
 COPY static ./static
+COPY migrations ./migrations
 
 RUN mkdir -p /app/uploads
 ENV UPLOAD_DIR=/app/uploads

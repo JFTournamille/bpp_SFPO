@@ -130,11 +130,15 @@ uvicorn app.main:app --reload --port 8000
 
 ## Mise à jour d'une base existante
 
-`schema.sql` ne sert qu'à l'initialisation. Sur une base déjà chargée, appliquez
-les scripts de `migrations/` (idempotents), par exemple :
-```bash
-psql "$DATABASE_URL" -f migrations/001_titres_LD.sql   # titres complets LD1 / LD2 / LD3
-```
+`schema.sql` ne sert qu'à l'initialisation. Les évolutions de la base sont des
+scripts `migrations/*.sql` **appliqués automatiquement au démarrage de
+l'application** (ordre alphabétique, une seule fois chacun — suivi dans la table
+`schema_migrations`). Un simple redéploiement suffit, aucun accès au serveur
+n'est nécessaire. En cas d'échec, l'erreur apparaît dans les logs de l'app
+CapRover et la migration est retentée au démarrage suivant.
+
+Pour ajouter une évolution : créer `migrations/002_xxx.sql` (idéalement
+idempotent), puis redéployer.
 
 ## Parcours de l'audit
 
