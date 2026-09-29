@@ -594,6 +594,7 @@ function buildAllQuestions(){
   QUESTION_BY_ID = {};
   ROOT_QUESTIONS = [];
   SECTIONS.forEach((ch, i)=>flattenSection(ch, i+1, ch.title, null, ALL_QUESTIONS));
+  ALL_QUESTIONS.forEach(q=>{ q.isBase = isBaseQuestion(q); });
 }
 
 /* Une question n'est visible que si sa condition de dépendance est remplie
@@ -612,6 +613,26 @@ function isVisible(q){
   return true;
 }
 function visibleQuestions(){ return ALL_QUESTIONS.filter(isVisible); }
+
+/* Question « de base » : affichée sur un questionnaire vierge, c.-à-d. sans
+   condition d'affichage, ni pour elle ni pour ses questions chapeau. */
+function isBaseQuestion(q){
+  for(let cur = q; cur; cur = cur.parentQuestionId ? QUESTION_BY_ID[cur.parentQuestionId] : null){
+    if(cur.dependsOnQuestionId) return false;
+  }
+  return true;
+}
+
+/* Compteur : réponses / questions de base (+ conditionnelles actuellement affichées) */
+function countLabel(qs){
+  const done = qs.filter(q=>qState(q.id).reponse).length;
+  const base = qs.filter(q=>q.isBase).length;
+  const cond = qs.length - base;
+  const pct = qs.length ? Math.round(done/qs.length*100) : 0;
+  return {done, base, cond, total: qs.length, pct,
+          text: done + '/' + base + (cond ? ' +' + cond : ''),
+          title: base + ' question(s) sans condition' + (cond ? ' + ' + cond + ' question(s) conditionnelle(s) affichée(s)' : '')};
+}
 
 function defaultQState(){
   return {
@@ -973,27 +994,29 @@ document.addEventListener('click', (e)=>{
 /* ======================= PROGRESS ======================= */
 function updateProgress(){
   const visible = visibleQuestions();
-  const answered = visible.filter(q=>qState(q.id).reponse).length;
-  const total = visible.length;
-  const pct = total ? Math.round(answered/total*100) : 0;
-  document.getElementById('progressFill').style.width = pct + '%';
-  document.getElementById('progressPct').textContent = answered + '/' + total + ' — ' + pct + '%';
+  const all = countLabel(visible);
+  document.getElementById('progressFill').style.width = all.pct + '%';
+  const pctEl = document.getElementById('progressPct');
+  pctEl.textContent = all.done + '/' + all.base + (all.cond ? ' + ' + all.cond + ' conditionnelle' + (all.cond>1?'s':'') : '') + ' — ' + all.pct + '%';
+  pctEl.title = all.title;
 
   const groups = auditGroups();
   const current = currentGroup(groups);
   groups.forEach(g=>{
-    const qs = visible.filter(g.match);
-    const done = qs.filter(q=>qState(q.id).reponse).length;
-    const gpct = qs.length ? Math.round(done/qs.length*100) : 0;
+    const c = countLabel(visible.filter(g.match));
     const item = document.querySelector('.side-item[data-group="'+g.key+'"]');
     if(item){
-      item.querySelector('.c').textContent = done + '/' + qs.length;
-      item.querySelector('.bar > div').style.width = gpct + '%';
-      item.classList.toggle('done', qs.length > 0 && done === qs.length);
+      const badge = item.querySelector('.c');
+      badge.textContent = c.text;
+      badge.title = c.title;
+      item.querySelector('.bar > div').style.width = c.pct + '%';
+      item.classList.toggle('done', c.total > 0 && c.done === c.total);
     }
     if(current && g.key === current.key){
-      document.getElementById('groupFill').style.width = gpct + '%';
-      document.getElementById('groupPct').textContent = done + '/' + qs.length + ' — ' + gpct + '%';
+      document.getElementById('groupFill').style.width = c.pct + '%';
+      const gp = document.getElementById('groupPct');
+      gp.textContent = c.done + '/' + c.base + (c.cond ? ' + ' + c.cond + ' cond.' : '') + ' — ' + c.pct + '%';
+      gp.title = c.title;
     }
   });
 }
