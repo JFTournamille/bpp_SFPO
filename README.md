@@ -193,7 +193,16 @@ serveur, pas seulement à l'écran).
   (colonne RGPD).
 - **Modifier la mention** : éditer `RGPD_HTML` et changer `RGPD_VERSION` dans
   `app/rgpd.py`. Chaque utilisateur devra alors acquitter la nouvelle version à
-  sa connexion suivante. Seul le dernier acquittement est conservé sur le compte.
+  sa connexion suivante. Le dernier acquittement est porté par le compte ; la
+  table `rgpd_acknowledgements` garde l'historique de toutes les versions
+  acquittées (bouton *Historique RGPD* sur chaque compte).
+- **Purge (durées de conservation)** : *Tableau de bord → Comptes → Purge RGPD*
+  liste les comptes sans connexion depuis plus de 3 ans et les auto-évaluations
+  clôturées depuis plus de 5 ans (durées définies dans `app/rgpd.py`, reprises
+  dans la mention). La suppression, définitive (réponses et fichiers de preuve
+  compris), n'a lieu qu'après confirmation par un expert ; le compte de l'expert
+  qui lance la purge n'est jamais supprimé. À lancer périodiquement (ex. une
+  fois par an).
 - La mention reste consultable à tout moment via le lien *Données
   personnelles* en pied de page.
 

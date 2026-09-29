@@ -1,10 +1,13 @@
 """Espace expert : tableau de bord des questionnaires, gestion des centres et des comptes."""
-from typing import Optional
+import os
+import shutil
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from app import auth
+from app.rgpd import ACCOUNT_RETENTION_YEARS, EVALUATION_RETENTION_YEARS
 from app.auth import require_expert
 from app.db import execute, execute_returning, fetch_all, fetch_one
 
@@ -234,3 +237,63 @@ def reset_password(user_id: int):
     execute("DELETE FROM sessions WHERE user_id = %s", (user_id,))
     return {"login": row["login"], "password": password}
 
+
+
+@router.get("/users/{user_id}/rgpd")
+def user_rgpd_history(user_id: int):
+    return fetch_all(
+        "SELECT version, acknowledged_at FROM rgpd_acknowledgements WHERE user_id = %s ORDER BY acknowledged_at DESC",
+        (user_id,),
+    )
+
+
+# ------------------------------------------------------------------
+# Purge RGPD : application des durées de conservation (aperçu puis confirmation par un expert)
+# ------------------------------------------------------------------
+UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "/app/uploads")
+
+# comptes sans connexion depuis la durée de conservation (date de création si jamais connecté) ;
+# le compte de l'expert qui lance la purge n'est jamais concerné
+PURGEABLE_USERS_SQL = (
+    "SELECT u.id, u.login, u.nom, u.role, c.libelle AS centre_libelle, u.created_at, u.last_login_at "
+    "FROM users u LEFT JOIN centres c ON c.id = u.centre_id "
+    "WHERE COALESCE(u.last_login_at, u.created_at) < now() - make_interval(years => %s) AND u.id <> %s "
+)
+# auto-évaluations clôturées depuis la durée de conservation
+PURGEABLE_EVALS_SQL = (
+    "SELECT e.id, e.label, c.libelle AS centre_libelle, e.completed_at "
+    "FROM evaluations e LEFT JOIN centres c ON c.id = e.centre_id "
+    "WHERE e.status = 'termine' AND e.completed_at < now() - make_interval(years => %s) "
+)
+
+
+@router.get("/purge")
+def purge_preview(me: dict = Depends(require_expert)):
+    return {
+        "account_years": ACCOUNT_RETENTION_YEARS,
+        "evaluation_years": EVALUATION_RETENTION_YEARS,
+        "users": fetch_all(PURGEABLE_USERS_SQL + "ORDER BY u.login", (ACCOUNT_RETENTION_YEARS, me["id"])),
+        "evaluations": fetch_all(PURGEABLE_EVALS_SQL + "ORDER BY e.completed_at", (EVALUATION_RETENTION_YEARS,)),
+    }
+
+
+class PurgeBody(BaseModel):
+    user_ids: List[int] = []
+    evaluation_ids: List[int] = []
+
+
+@router.post("/purge")
+def purge(body: PurgeBody, me: dict = Depends(require_expert)):
+    """Supprime les éléments confirmés depuis l'aperçu, après avoir revérifié qu'ils sont toujours éligibles."""
+    users = [r["id"] for r in fetch_all(PURGEABLE_USERS_SQL, (ACCOUNT_RETENTION_YEARS, me["id"]))
+             if r["id"] in set(body.user_ids)]
+    evals = [r["id"] for r in fetch_all(PURGEABLE_EVALS_SQL, (EVALUATION_RETENTION_YEARS,))
+             if r["id"] in set(body.evaluation_ids)]
+    for evaluation_id in evals:
+        # réponses supprimées en cascade ; fichiers de preuve rangés sous UPLOAD_DIR/<evaluation_id>/
+        execute("DELETE FROM evaluations WHERE id = %s", (evaluation_id,))
+        shutil.rmtree(os.path.join(UPLOAD_DIR, str(evaluation_id)), ignore_errors=True)
+    for user_id in users:
+        # sessions et historique d'acquittement supprimés en cascade
+        execute("DELETE FROM users WHERE id = %s", (user_id,))
+    return {"users_deleted": len(users), "evaluations_deleted": len(evals)}

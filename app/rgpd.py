@@ -13,6 +13,10 @@ SFPO_POLICY_URL = "https://sfpo.com/politique-rgpd/"
 SFPO_ADDRESS = "37, rue des Mathurins, 75008 Paris"
 DPO_EMAIL = "dpo@sfpo.com"
 
+# Durées de conservation (affichées dans la mention et appliquées par la purge de l'espace expert).
+ACCOUNT_RETENTION_YEARS = 3      # compte : à compter de la dernière connexion
+EVALUATION_RETENTION_YEARS = 5   # auto-évaluation : à compter de sa clôture
+
 RGPD_TITLE = "Information sur le traitement de vos données personnelles"
 
 # Texte HTML statique (aucune donnée utilisateur injectée).
@@ -60,8 +64,8 @@ Les données ne font l'objet d'aucun transfert hors de l'Espace économique euro
 
 <h4>Durée de conservation</h4>
 <ul>
-  <li>compte utilisateur : 3 ans après la dernière connexion ;</li>
-  <li>auto-évaluations : 5 ans après leur clôture, afin de permettre le suivi dans le temps, puis suppression
+  <li>compte utilisateur : {ACCOUNT_RETENTION_YEARS} ans après la dernière connexion ;</li>
+  <li>auto-évaluations : {EVALUATION_RETENTION_YEARS} ans après leur clôture, afin de permettre le suivi dans le temps, puis suppression
       ou anonymisation.</li>
 </ul>
 

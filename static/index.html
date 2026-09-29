@@ -456,6 +456,8 @@
   .modal-bg.show{display:flex;}
   .modal{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow-lg);padding:24px 26px;width:100%;max-width:520px;max-height:90vh;overflow:auto;}
   .modal h3{margin:0 0 14px;font-size:16px;}
+  .modal h4{margin:14px 0 6px;font-size:13.5px;}
+  .modal ul{margin:0 0 8px;padding-left:18px;font-size:13px;}
   .modal .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
   .cred-box{background:var(--bg-soft);border-radius:10px;padding:12px 14px;font-size:13px;white-space:pre-wrap;font-family:ui-monospace,Menlo,monospace;}
 </style>
@@ -557,6 +559,7 @@
         <div class="admin-toolbar">
           <h2>Comptes</h2>
           <input type="search" id="userSearch" placeholder="Filtrer (identifiant, nom, centre)…">
+          <button class="btn small ghost" id="btnPurge" type="button">Purge RGPD</button>
           <button class="btn small primary" id="btnNewUser" type="button">+ Nouveau compte</button>
         </div>
         <table class="admin">
@@ -1898,11 +1901,52 @@ function renderUsers(){
       <td class="actions">
         <button class="btn small ghost" data-edit="${u.id}">Modifier</button>
         <button class="btn small ghost" data-reset="${u.id}">Nouveau mot de passe</button>
+        <button class="btn small ghost" data-rgpd="${u.id}">Historique RGPD</button>
       </td></tr>`).join('')
     : '<tr class="empty-row"><td colspan="7">Aucun compte.</td></tr>';
   tbody.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click', ()=>editUser(USERS.find(u=>u.id === +b.dataset.edit))));
   tbody.querySelectorAll('[data-reset]').forEach(b=>b.addEventListener('click', ()=>resetUserPassword(USERS.find(u=>u.id === +b.dataset.reset))));
+  tbody.querySelectorAll('[data-rgpd]').forEach(b=>b.addEventListener('click', ()=>showRgpdHistory(USERS.find(u=>u.id === +b.dataset.rgpd))));
 }
+
+async function showRgpdHistory(u){
+  let rows;
+  try{ rows = await apiFetch(`/admin/users/${u.id}/rgpd`); }catch(err){ return alert(err.message); }
+  openModal(`<h3>Acquittements RGPD — ${escapeHtml(u.nom || u.login)}</h3>
+    ${rows.length ? `<table class="admin"><thead><tr><th>Version de la mention</th><th>Acquittée le</th></tr></thead><tbody>
+      ${rows.map(r=>`<tr><td>${escapeHtml(r.version)}</td><td>${fmtDate(r.acknowledged_at, true)}</td></tr>`).join('')}</tbody></table>`
+      : '<p class="muted">Aucun acquittement enregistré.</p>'}
+    <div class="modal-actions"><button class="btn primary" data-close>Fermer</button></div>`);
+}
+
+document.getElementById('btnPurge').addEventListener('click', async ()=>{
+  let p;
+  try{ p = await apiFetch('/admin/purge'); }catch(err){ return alert(err.message); }
+  const nothing = !p.users.length && !p.evaluations.length;
+  openModal(`<h3>Purge RGPD — durées de conservation</h3>
+    <p class="form-note">Comptes sans connexion depuis plus de ${p.account_years} ans ; auto-évaluations clôturées depuis plus de
+      ${p.evaluation_years} ans (réponses et fichiers de preuve compris). <strong>Suppression définitive.</strong></p>
+    <h4>Comptes (${p.users.length})</h4>
+    ${p.users.length ? '<ul>' + p.users.map(u=>`<li>${escapeHtml(u.login)} — ${escapeHtml(u.nom || '')}
+      ${u.centre_libelle ? '(' + escapeHtml(u.centre_libelle) + ')' : ''} · dernière connexion : ${fmtDate(u.last_login_at)}</li>`).join('') + '</ul>'
+      : '<p class="muted">Aucun.</p>'}
+    <h4>Auto-évaluations (${p.evaluations.length})</h4>
+    ${p.evaluations.length ? '<ul>' + p.evaluations.map(e=>`<li>${escapeHtml(e.centre_libelle || 'Sans centre')} — ${escapeHtml(e.label)}
+      · clôturée le ${fmtDate(e.completed_at)}</li>`).join('') + '</ul>' : '<p class="muted">Aucune.</p>'}
+    <p class="form-error" id="modalError"></p>
+    <div class="modal-actions"><button class="btn ghost" data-close>${nothing ? 'Fermer' : 'Annuler'}</button>
+      ${nothing ? '' : '<button class="btn primary" id="modalOk">Supprimer définitivement</button>'}</div>`);
+  if(nothing) return;
+  document.getElementById('modalOk').addEventListener('click', async ()=>{
+    if(!confirm('Confirmer la suppression définitive de ces éléments ?')) return;
+    try{
+      const r = await apiFetch('/admin/purge', jsonOpts('POST',
+        {user_ids: p.users.map(u=>u.id), evaluation_ids: p.evaluations.map(e=>e.id)}));
+      closeModal(); loadUsers();
+      alert(`${r.users_deleted} compte(s) et ${r.evaluations_deleted} auto-évaluation(s) supprimé(s).`);
+    }catch(err){ document.getElementById('modalError').textContent = err.message; }
+  });
+});
 document.getElementById('userSearch').addEventListener('input', renderUsers);
 
 function userFormHtml(u){

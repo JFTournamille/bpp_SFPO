@@ -147,6 +147,7 @@ def acknowledge_rgpd(body: RgpdAck, user: dict = Depends(current_user_any)):
         raise HTTPException(status_code=409, detail="La mention a été mise à jour, merci de la relire")
     execute("UPDATE users SET rgpd_version = %s, rgpd_acknowledged_at = now() WHERE id = %s",
             (rgpd.RGPD_VERSION, user["id"]))
+    execute("INSERT INTO rgpd_acknowledgements (user_id, version) VALUES (%s, %s)", (user["id"], rgpd.RGPD_VERSION))
     return {"ok": True}
 
 
