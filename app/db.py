@@ -42,3 +42,9 @@ def fetch_one(sql, params=None):
 def execute(sql, params=None):
     with get_cursor(commit=True) as cur:
         cur.execute(sql, params or ())
+
+
+def execute_returning(sql, params=None):
+    with get_cursor(commit=True) as cur:
+        cur.execute(sql, params or ())
+        return cur.fetchone()

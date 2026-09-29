@@ -370,6 +370,83 @@
     .answers label{min-width:80px;font-size:11.5px;padding:8px 4px;}
     .bar-row .bname{width:140px;font-size:11.5px;}
   }
+
+  /* ===== Authentification ===== */
+  #authScreen{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,var(--blue-darker),var(--fuchsia-dark));padding:16px;}
+  .auth-card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow-lg);padding:30px 32px;width:100%;max-width:400px;}
+  .auth-card img{height:52px;display:block;margin:0 auto 14px;}
+  .auth-card h2{font-size:17px;text-align:center;margin:0 0 4px;color:var(--fuchsia);}
+  .auth-card p.sub{font-size:12.5px;text-align:center;color:var(--text-light);margin:0 0 20px;}
+  .field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px;}
+  .field label{font-size:12px;font-weight:600;color:var(--text-light);}
+  .field input,.field select{font-family:inherit;font-size:14px;padding:9px 12px;border:1px solid var(--border);border-radius:10px;}
+  .field input:focus,.field select:focus{outline:2px solid var(--blue);border-color:transparent;}
+  .auth-card .btn{width:100%;margin-top:6px;}
+  .form-error{color:var(--red);font-size:12.5px;min-height:18px;margin:4px 0 0;}
+  .form-note{font-size:12px;color:var(--text-light);margin:0 0 12px;}
+
+  .user-chip{font-size:12px;color:var(--text-light);text-align:right;line-height:1.3;max-width:260px;}
+  .user-chip strong{color:var(--text);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  body:not(.is-expert) .expert-only{display:none!important;}
+  nav.tabs button:disabled{opacity:.4;cursor:not-allowed;}
+
+  /* ===== Bandeau du questionnaire ouvert ===== */
+  .context-bar{background:var(--blue-darker);color:#fff;}
+  .context-bar .wrap{display:flex;align-items:center;gap:12px;padding:9px 20px;flex-wrap:wrap;font-size:13px;}
+  .context-bar .ctx-centre{font-weight:700;}
+  .context-bar .ctx-view{margin-left:auto;display:flex;gap:8px;align-items:center;}
+  .context-bar .btn{border-color:rgba(255,255,255,.6);color:#fff;background:transparent;}
+  .context-bar .btn:hover{background:#fff;color:var(--blue-darker);}
+  .status-pill{display:inline-block;padding:2px 10px;border-radius:var(--radius-pill);font-size:11.5px;font-weight:700;}
+  .status-en_cours{background:var(--orange-bg);color:var(--orange);}
+  .status-termine{background:var(--green-bg);color:var(--green);}
+  .member-view-note{background:var(--fuchsia);color:#fff;font-size:11.5px;font-weight:600;padding:2px 10px;border-radius:var(--radius-pill);}
+  .readonly-note{background:var(--gray-bg);color:var(--gray);border-radius:10px;padding:10px 14px;font-size:13px;margin:0 0 14px;display:none;}
+  body.readonly .readonly-note{display:block;}
+  body.readonly .qcard .answers label{cursor:not-allowed;}
+
+  /* ===== Tableau de bord expert ===== */
+  .admin-subtabs{display:flex;gap:6px;margin:0 0 16px;flex-wrap:wrap;}
+  .admin-subtabs button{font-family:inherit;font-size:13px;font-weight:600;padding:8px 16px;border-radius:var(--radius-pill);
+    border:1px solid var(--border);background:#fff;color:var(--text-light);cursor:pointer;}
+  .admin-subtabs button.active{background:var(--fuchsia);border-color:var(--fuchsia);color:#fff;}
+  .admin-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;}
+  .admin-toolbar h2{font-size:18px;margin:0 auto 0 0;}
+  .admin-toolbar input[type=search],.admin-toolbar select{font-family:inherit;font-size:13px;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-pill);}
+  .admin-toolbar input[type=search]{min-width:240px;}
+  table.admin{width:100%;border-collapse:collapse;background:#fff;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);font-size:13px;}
+  table.admin th{background:var(--bg-soft-2);text-align:left;font-size:12px;font-weight:700;padding:10px 12px;color:var(--text-light);}
+  table.admin td{padding:9px 12px;border-top:1px solid var(--bg-soft-2);vertical-align:middle;}
+  table.admin tr.inactive td{opacity:.5;}
+  table.admin .actions{white-space:nowrap;text-align:right;}
+  table.admin .actions .btn{margin-left:4px;}
+  .mini-progress{display:flex;align-items:center;gap:8px;min-width:150px;}
+  .mini-progress .track{flex:1;height:7px;border-radius:var(--radius-pill);background:var(--bg-soft-2);overflow:hidden;}
+  .mini-progress .track > div{height:100%;background:linear-gradient(90deg,var(--blue),var(--fuchsia));}
+  .mini-progress span{font-size:11.5px;color:var(--text-light);white-space:nowrap;}
+  .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:18px;}
+  .kpi{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border);padding:14px 18px;}
+  .kpi .v{font-size:24px;font-weight:700;color:var(--blue-dark);}
+  .kpi .l{font-size:12px;color:var(--text-light);}
+  .muted{color:var(--text-light);font-size:12px;}
+  .empty-row td{text-align:center;color:var(--text-light);padding:22px;}
+
+  /* Sélecteur de centre avec recherche */
+  .centre-picker{position:relative;}
+  .centre-picker .results{position:absolute;left:0;right:0;top:100%;z-index:60;background:#fff;border:1px solid var(--border);
+    border-radius:10px;box-shadow:var(--shadow-lg);max-height:260px;overflow:auto;display:none;}
+  .centre-picker .results.show{display:block;}
+  .centre-picker .results div{padding:8px 12px;font-size:13px;cursor:pointer;}
+  .centre-picker .results div:hover,.centre-picker .results div.hl{background:var(--bg-soft);}
+
+  /* Fenêtre modale */
+  .modal-bg{position:fixed;inset:0;z-index:90;background:rgba(15,25,40,.45);display:none;align-items:center;justify-content:center;padding:16px;}
+  .modal-bg.show{display:flex;}
+  .modal{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow-lg);padding:24px 26px;width:100%;max-width:520px;max-height:90vh;overflow:auto;}
+  .modal h3{margin:0 0 14px;font-size:16px;}
+  .modal .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+  .cred-box{background:var(--bg-soft);border-radius:10px;padding:12px 14px;font-size:13px;white-space:pre-wrap;font-family:ui-monospace,Menlo,monospace;}
 </style>
 </head>
 <body>
@@ -382,22 +459,39 @@
       <p>Société Française de Pharmacie Oncologique · Référentiel ANSM 2023</p>
     </div>
     <div class="header-actions">
-      <div class="role-switch" id="roleSwitch">
-        <button type="button" class="role-btn active" data-role="membre">Membre SFPO</button>
-        <button type="button" class="role-btn" data-role="expert">Expert SFPO</button>
-      </div>
-      <button class="btn ghost small" id="btnReset" type="button">Réinitialiser</button>
+      <div class="user-chip" id="userChip"></div>
+      <button class="btn ghost small" id="btnLogout" type="button">Déconnexion</button>
     </div>
   </div>
 </header>
 
 <nav class="tabs">
   <div class="wrap">
+    <button type="button" class="tab-btn expert-only" data-tab="admin">Tableau de bord</button>
     <button type="button" class="tab-btn active" data-tab="questionnaire">Auto-évaluation</button>
     <button type="button" class="tab-btn" data-tab="analysis">Analyse &amp; Expertise</button>
     <button type="button" class="tab-btn" data-tab="stats">Statistiques</button>
   </div>
 </nav>
+
+<div class="context-bar" id="contextBar" style="display:none;">
+  <div class="wrap">
+    <span>Questionnaire :</span>
+    <span class="ctx-centre" id="ctxCentre"></span>
+    <span class="status-pill" id="ctxStatus"></span>
+    <span class="muted" id="ctxDate" style="color:#cfe0ee"></span>
+    <div class="ctx-view">
+      <span class="member-view-note" id="memberViewNote" style="display:none;">Vue membre (simulation)</span>
+      <div class="role-switch expert-only" id="roleSwitch" title="Voir le questionnaire tel que le voit un membre">
+        <button type="button" class="role-btn" data-role="membre">Vue membre</button>
+        <button type="button" class="role-btn active" data-role="expert">Vue expert</button>
+      </div>
+      <button class="btn small" id="btnComplete" type="button">Marquer comme terminé</button>
+      <button class="btn small expert-only" id="btnReopen" type="button">Rouvrir</button>
+      <button class="btn small expert-only" id="btnReset" type="button">Réinitialiser</button>
+    </div>
+  </div>
+</div>
 
 <div class="progress-panel" id="progressPanel" style="display:none;">
   <div class="wrap">
@@ -417,13 +511,66 @@
   </div>
 </div>
 
-<p id="loadingNote">Chargement du questionnaire depuis la base de données…</p>
+<p id="loadingNote" style="display:none;">Chargement du questionnaire depuis la base de données…</p>
 <p id="errorNote">Impossible de contacter l'API. Vérifiez que le serveur backend et la base PostgreSQL sont bien démarrés.</p>
 
 <main id="mainContent" style="display:none;">
   <div class="wrap">
 
+    <section id="tab-admin" class="tab-panel expert-only" style="display:none;">
+      <div class="admin-subtabs" id="adminSubtabs">
+        <button type="button" class="active" data-sub="evals">Questionnaires</button>
+        <button type="button" data-sub="users">Comptes</button>
+        <button type="button" data-sub="centres">Centres</button>
+      </div>
+
+      <div class="admin-sub" id="sub-evals">
+        <div class="kpi-row" id="adminKpis"></div>
+        <div class="admin-toolbar">
+          <h2>Questionnaires</h2>
+          <input type="search" id="evalSearch" placeholder="Filtrer par centre…">
+          <select id="evalStatus">
+            <option value="">Tous les statuts</option>
+            <option value="en_cours">En cours</option>
+            <option value="termine">Terminés</option>
+          </select>
+          <button class="btn small primary" id="btnNewEval" type="button">+ Nouveau questionnaire</button>
+        </div>
+        <table class="admin">
+          <thead><tr><th>Centre</th><th>Statut</th><th>Progression</th><th>Non-conf. (à qualifier)</th><th>Membres</th><th>Dernière activité</th><th></th></tr></thead>
+          <tbody id="evalRows"></tbody>
+        </table>
+      </div>
+
+      <div class="admin-sub" id="sub-users" style="display:none;">
+        <div class="admin-toolbar">
+          <h2>Comptes</h2>
+          <input type="search" id="userSearch" placeholder="Filtrer (identifiant, nom, centre)…">
+          <button class="btn small primary" id="btnNewUser" type="button">+ Nouveau compte</button>
+        </div>
+        <table class="admin">
+          <thead><tr><th>Identifiant</th><th>Nom</th><th>Rôle</th><th>Centre</th><th>Dernière connexion</th><th></th></tr></thead>
+          <tbody id="userRows"></tbody>
+        </table>
+      </div>
+
+      <div class="admin-sub" id="sub-centres" style="display:none;">
+        <div class="admin-toolbar">
+          <h2>Centres</h2>
+          <input type="search" id="centreSearch" placeholder="Rechercher un centre (nom, ville, FINESS)…">
+          <label class="muted"><input type="checkbox" id="centreActifs"> Seulement les centres actifs</label>
+          <button class="btn small primary" id="btnNewCentre" type="button">+ Nouveau centre</button>
+        </div>
+        <table class="admin">
+          <thead><tr><th>Centre</th><th>FINESS</th><th>Membres</th><th>Questionnaires</th><th></th></tr></thead>
+          <tbody id="centreRows"></tbody>
+        </table>
+        <p class="muted" id="centreNote"></p>
+      </div>
+    </section>
+
     <section id="tab-questionnaire" class="tab-panel">
+      <p class="readonly-note">Questionnaire terminé : consultation seule. Un expert SFPO peut le rouvrir si nécessaire.</p>
       <div class="audit-layout">
         <aside class="audit-side">
           <div class="side-title" id="sideTitle">Thématiques</div>
@@ -509,6 +656,30 @@
   </div>
 </main>
 
+<div id="authScreen">
+  <form class="auth-card" id="loginForm" autocomplete="on">
+    <img src="assets/logo_sfpo.png" alt="SFPO">
+    <h2>Auto-évaluation BPP</h2>
+    <p class="sub">Connectez-vous avec les identifiants transmis par la SFPO</p>
+    <div class="field"><label for="loginInput">Identifiant</label><input id="loginInput" name="username" autocomplete="username" required></div>
+    <div class="field"><label for="passwordInput">Mot de passe</label><input id="passwordInput" name="password" type="password" autocomplete="current-password" required></div>
+    <p class="form-error" id="loginError"></p>
+    <button class="btn primary" type="submit">Se connecter</button>
+  </form>
+  <form class="auth-card" id="pwdForm" style="display:none;">
+    <img src="assets/logo_sfpo.png" alt="SFPO">
+    <h2>Choisissez votre mot de passe</h2>
+    <p class="sub">Première connexion ou mot de passe réinitialisé : définissez un mot de passe personnel (10 caractères minimum).</p>
+    <div class="field"><label for="pwdCurrent">Mot de passe actuel (provisoire)</label><input id="pwdCurrent" type="password" autocomplete="current-password" required></div>
+    <div class="field"><label for="pwdNew">Nouveau mot de passe</label><input id="pwdNew" type="password" autocomplete="new-password" minlength="10" required></div>
+    <div class="field"><label for="pwdNew2">Confirmation</label><input id="pwdNew2" type="password" autocomplete="new-password" minlength="10" required></div>
+    <p class="form-error" id="pwdError"></p>
+    <button class="btn primary" type="submit">Valider</button>
+  </form>
+</div>
+
+<div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
+
 <footer class="site">Outil d'auto-évaluation interne — SFPO · Données stockées dans PostgreSQL (API FastAPI)</footer>
 
 <script>
@@ -521,7 +692,9 @@ let ALL_QUESTIONS = [];
 let QUESTION_BY_ID = {};
 let EVALUATION_ID = null;
 let state = {}; // question_id -> response object (snake_case, mirrors API)
-let currentRole = 'membre'; // 'membre' | 'expert' — écran uniquement pour l'instant, pas d'authentification
+let ME = null;             // utilisateur connecté (id, login, role, centre…)
+let CURRENT_EVAL = null;   // questionnaire ouvert (id, centre, statut…)
+let currentRole = 'membre'; // vue affichée : 'membre' | 'expert' (un expert peut simuler la vue membre)
 let ROOT_QUESTIONS = []; // questions de 1er niveau (avec leurs sous-questions), dans l'ordre du référentiel
 
 /* Deux façons de parcourir l'audit :
@@ -578,7 +751,7 @@ function displayTitle(t){
 /* Aplatit l'arbre de sections renvoyé par /api/questionnaire : associe à chaque
    question son chapitre (section de niveau 1) et sa section immédiate, en conservant
    l'ordre du document (questions propres à une section avant ses sous-sections). */
-function flattenQuestions(q, section, chapterNum, chapterTitle, sub, depth, out, bppChap){
+function flattenQuestions(q, section, chapterNum, chapterTitle, sub, depth, out, bppChap, parentId){
   if(depth === 0){
     bppChap = refChapter(q);
     ROOT_QUESTIONS.push({node:q, chapterNum, bppChap, article:refArticle(q)});
@@ -588,11 +761,12 @@ function flattenQuestions(q, section, chapterNum, chapterTitle, sub, depth, out,
     chapterNum, chapterTitle,
     subId: sub ? sub.id : null, subTitle: sub ? sub.title : null,
     depth, bppChap,
+    parentQuestionId: parentId || null, // l'API imbrique les sous-questions sans renvoyer ce lien
   });
   delete flat.children;
   out.push(flat);
   QUESTION_BY_ID[flat.id] = flat;
-  (q.children||[]).forEach(c=>flattenQuestions(c, section, chapterNum, chapterTitle, sub, depth+1, out, bppChap));
+  (q.children||[]).forEach(c=>flattenQuestions(c, section, chapterNum, chapterTitle, sub, depth+1, out, bppChap, flat.id));
 }
 function flattenSection(section, chapterNum, chapterTitle, sub, out){
   section.questions.forEach(q=>flattenQuestions(q, section, chapterNum, chapterTitle, sub, 0, out));
@@ -657,6 +831,7 @@ function escapeHtml(s){
 
 async function apiFetch(path, options){
   const res = await fetch(API + path, options);
+  if(res.status === 401 && !path.startsWith('/auth/')){ showLogin(); throw new Error('Session expirée'); }
   if(!res.ok){
     let detail = res.statusText;
     try{ detail = (await res.json()).detail || detail; }catch(e){}
@@ -672,35 +847,150 @@ function setSaveIndicator(kind, text){
   ind.textContent = text;
 }
 
+/* ======================= AUTHENTIFICATION ======================= */
+function showLogin(){
+  document.body.classList.remove('is-expert');
+  document.getElementById('authScreen').style.display = 'flex';
+  document.getElementById('loginForm').style.display = 'block';
+  document.getElementById('pwdForm').style.display = 'none';
+  document.getElementById('loginInput').focus();
+}
+function showPasswordChange(){
+  document.getElementById('authScreen').style.display = 'flex';
+  document.getElementById('loginForm').style.display = 'none';
+  document.getElementById('pwdForm').style.display = 'block';
+  document.getElementById('pwdCurrent').focus();
+}
+
+document.getElementById('loginForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const err = document.getElementById('loginError');
+  err.textContent = '';
+  try{
+    const me = await apiFetch('/auth/login', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({login: document.getElementById('loginInput').value, password: document.getElementById('passwordInput').value})});
+    const typed = document.getElementById('passwordInput').value;
+    document.getElementById('passwordInput').value = '';
+    if(me.must_change_password){ document.getElementById('pwdCurrent').value = typed; showPasswordChange(); }
+    else start(me);
+  }catch(ex){ err.textContent = ex.message; }
+});
+
+document.getElementById('pwdForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const err = document.getElementById('pwdError');
+  err.textContent = '';
+  const n1 = document.getElementById('pwdNew').value, n2 = document.getElementById('pwdNew2').value;
+  if(n1 !== n2){ err.textContent = 'Les deux mots de passe ne correspondent pas'; return; }
+  try{
+    await apiFetch('/auth/password', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({current_password: document.getElementById('pwdCurrent').value, new_password: n1})});
+    ['pwdCurrent','pwdNew','pwdNew2'].forEach(id=>document.getElementById(id).value='');
+    start(await apiFetch('/auth/me'));
+  }catch(ex){ err.textContent = ex.message; }
+});
+
+document.getElementById('btnLogout').addEventListener('click', async ()=>{
+  try{ await apiFetch('/auth/logout', {method:'POST'}); }catch(e){}
+  location.reload();
+});
+
 /* ======================= INIT ======================= */
 async function init(){
+  let me;
   try{
-    SECTIONS = await apiFetch('/questionnaire');
-    buildAllQuestions();
+    me = await apiFetch('/auth/me');
+  }catch(err){
+    if(err.message === 'Non connecté' || err.message === 'Session expirée') return showLogin();
+    document.getElementById('errorNote').style.display = 'block';
+    return;
+  }
+  if(me.must_change_password) return showPasswordChange();
+  start(me);
+}
 
-    const evalInfo = await apiFetch('/evaluations/current');
-    EVALUATION_ID = evalInfo.id;
-
-    const responses = await apiFetch(`/evaluations/${EVALUATION_ID}/responses`);
-    state = {};
-    ALL_QUESTIONS.forEach(q=>{
-      state[q.id] = Object.assign(defaultQState(), responses[q.id] || {});
-    });
-
+async function start(me){
+  ME = me;
+  document.getElementById('authScreen').style.display = 'none';
+  document.body.classList.toggle('is-expert', me.role === 'expert');
+  currentRole = me.role;
+  document.getElementById('userChip').innerHTML =
+    `<strong>${escapeHtml(me.nom || me.login)}</strong>` +
+    (me.role === 'expert' ? 'Expert · ' + escapeHtml(me.login) : escapeHtml(me.centre_libelle || 'Aucun centre rattaché'));
+  document.getElementById('loadingNote').style.display = 'block';
+  try{
+    if(!SECTIONS.length){
+      SECTIONS = await apiFetch('/questionnaire');
+      buildAllQuestions();
+    }
     document.getElementById('loadingNote').style.display = 'none';
     document.getElementById('mainContent').style.display = 'block';
-    document.getElementById('progressPanel').style.display = 'block';
-    setSaveIndicator('saved', 'Synchronisé');
-
-    renderQuestionnaire();
-    refreshVisibility();
-    updateProgress();
-    switchTab('questionnaire');
+    if(me.role === 'expert'){
+      setEvaluationTabsEnabled(false);
+      switchTab('admin');
+    } else {
+      await openEvaluation(await apiFetch('/evaluations/current'));
+    }
   }catch(err){
     console.error(err);
     document.getElementById('loadingNote').style.display = 'none';
-    document.getElementById('errorNote').style.display = 'block';
+    const note = document.getElementById('errorNote');
+    note.textContent = err.message && err.message !== 'Failed to fetch' ? err.message
+      : "Impossible de contacter l'API. Vérifiez que le serveur backend et la base PostgreSQL sont bien démarrés.";
+    note.style.display = 'block';
   }
+}
+
+function setEvaluationTabsEnabled(on){
+  ['questionnaire','analysis','stats'].forEach(t=>{
+    const b = document.querySelector(`.tab-btn[data-tab="${t}"]`);
+    b.disabled = !on;
+    b.title = on ? '' : 'Ouvrez un questionnaire depuis le tableau de bord';
+  });
+}
+
+/* Ouvre un questionnaire (celui du centre pour un membre, n'importe lequel pour un expert) */
+async function openEvaluation(ev){
+  CURRENT_EVAL = ev;
+  EVALUATION_ID = ev.id;
+  const responses = await apiFetch(`/evaluations/${EVALUATION_ID}/responses`);
+  state = {};
+  ALL_QUESTIONS.forEach(q=>{
+    state[q.id] = Object.assign(defaultQState(), responses[q.id] || {});
+  });
+  setEvaluationTabsEnabled(true);
+  applyViewMode();
+  setSaveIndicator('saved', 'Synchronisé');
+  switchTab('questionnaire');
+}
+
+function isReadOnly(){
+  return !!CURRENT_EVAL && CURRENT_EVAL.status === 'termine' && currentRole !== 'expert';
+}
+
+/* Met à jour le bandeau et ré-affiche selon le statut du questionnaire et la vue (membre / expert) */
+function applyViewMode(){
+  const ev = CURRENT_EVAL;
+  const bar = document.getElementById('contextBar');
+  if(!ev){ bar.style.display = 'none'; return; }
+  bar.style.display = 'block';
+  document.getElementById('ctxCentre').textContent = ev.centre_libelle || 'Sans centre (questionnaire historique)';
+  const st = document.getElementById('ctxStatus');
+  st.className = 'status-pill status-' + ev.status;
+  st.textContent = ev.status === 'termine' ? 'Terminé' : 'En cours';
+  document.getElementById('ctxDate').textContent = ev.status === 'termine' && ev.completed_at
+    ? 'le ' + new Date(ev.completed_at).toLocaleDateString('fr-FR') : '';
+  const isRealExpert = ME && ME.role === 'expert';
+  document.querySelectorAll('.role-btn').forEach(x=>x.classList.toggle('active', x.dataset.role === currentRole));
+  document.getElementById('memberViewNote').style.display = (isRealExpert && currentRole === 'membre') ? '' : 'none';
+  document.getElementById('btnComplete').style.display = ev.status === 'en_cours' ? '' : 'none';
+  document.getElementById('btnReopen').style.display = ev.status === 'termine' ? '' : 'none';
+  document.body.classList.toggle('readonly', isReadOnly());
+  renderQuestionnaire();
+  refreshVisibility();
+  updateProgress();
+  const activeTab = document.querySelector('.tab-btn.active');
+  if(activeTab && activeTab.dataset.tab === 'analysis') renderAnalysis();
 }
 
 function qState(qid){ return state[qid]; }
@@ -710,18 +1000,19 @@ const saveTimers = {};
 function scheduleSave(qid){
   clearTimeout(saveTimers[qid]);
   setSaveIndicator('saving', 'Enregistrement...');
-  saveTimers[qid] = setTimeout(()=>persist(qid), 400);
+  const evalId = EVALUATION_ID;
+  const st = qState(qid);
+  saveTimers[qid] = setTimeout(()=>persist(qid, evalId, st), 400);
 }
 
-async function persist(qid){
-  const st = qState(qid);
+async function persist(qid, evalId, st){
   const body = {
     reponse: st.reponse, comment_actif: st.comment_actif, commentaire: st.commentaire,
     preuve_texte: st.preuve_texte, criticite: st.criticite,
     risque_maitrise: st.risque_maitrise, action: st.action
   };
   try{
-    await apiFetch(`/evaluations/${EVALUATION_ID}/responses/${qid}`, {
+    await apiFetch(`/evaluations/${evalId}/responses/${qid}`, {
       method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
     });
     setSaveIndicator('saved', 'Enregistré ' + new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}));
@@ -925,6 +1216,10 @@ function renderQuestionCard(q, depth){
   `;
 
   if(st.reponse){ card.classList.add('answered'); card.dataset.reponse = st.reponse; }
+  if(isReadOnly()){
+    card.querySelectorAll('input, textarea, button').forEach(el=>{ el.disabled = true; });
+    card.querySelector('.rm').style.display = 'none';
+  }
 
   card.querySelectorAll('input[type=radio]').forEach(r=>{
     r.addEventListener('change', ()=>{
@@ -1333,6 +1628,8 @@ function renderStats(){
 
 /* ======================= TABS ======================= */
 function switchTab(name){
+  if(name === 'admin') renderAdmin();
+  document.getElementById('contextBar').style.display = (name !== 'admin' && CURRENT_EVAL) ? 'block' : 'none';
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
   document.querySelectorAll('.tab-panel').forEach(p=>p.style.display='none');
   document.getElementById('tab-'+name).style.display='block';
@@ -1347,11 +1644,32 @@ document.querySelectorAll('.tab-btn').forEach(b=>{
 /* ======================= ROLE SWITCH ======================= */
 document.querySelectorAll('.role-btn').forEach(b=>{
   b.addEventListener('click', ()=>{
+    if(!ME || ME.role !== 'expert') return;
     currentRole = b.dataset.role;
-    document.querySelectorAll('.role-btn').forEach(x=>x.classList.toggle('active', x===b));
-    const activeTab = document.querySelector('.tab-btn.active').dataset.tab;
-    if(activeTab === 'analysis') renderAnalysis();
+    applyViewMode();
+    if(document.querySelector('.tab-btn.active').dataset.tab === 'stats') renderStats();
   });
+});
+
+/* ======================= STATUT DU QUESTIONNAIRE ======================= */
+document.getElementById('btnComplete').addEventListener('click', async ()=>{
+  const visible = visibleQuestions();
+  const missing = visible.filter(q=>!qState(q.id).reponse).length;
+  const msg = (missing ? `Il reste ${missing} question(s) sans réponse.\n\n` : '') +
+    'Marquer ce questionnaire comme terminé ? ' +
+    (currentRole === 'expert' ? 'Les membres ne pourront plus le modifier.' : 'Vous ne pourrez plus le modifier (un expert SFPO pourra le rouvrir).');
+  if(!confirm(msg)) return;
+  try{
+    CURRENT_EVAL = await apiFetch(`/evaluations/${EVALUATION_ID}/complete`, {method:'POST'});
+    applyViewMode();
+  }catch(err){ alert(err.message); }
+});
+document.getElementById('btnReopen').addEventListener('click', async ()=>{
+  if(!confirm('Rouvrir ce questionnaire ? Les membres du centre pourront à nouveau le modifier.')) return;
+  try{
+    CURRENT_EVAL = await apiFetch(`/evaluations/${EVALUATION_ID}/reopen`, {method:'POST'});
+    applyViewMode();
+  }catch(err){ alert(err.message); }
 });
 
 /* ======================= RESET ======================= */
@@ -1360,9 +1678,7 @@ document.getElementById('btnReset').addEventListener('click', async ()=>{
   try{
     await apiFetch(`/evaluations/${EVALUATION_ID}/responses`, {method:'DELETE'});
     ALL_QUESTIONS.forEach(q=>{ state[q.id] = defaultQState(); });
-    renderQuestionnaire();
-    refreshVisibility();
-    updateProgress();
+    applyViewMode();
     setSaveIndicator('saved', 'Réinitialisé');
   }catch(err){
     alert('Erreur lors de la réinitialisation : ' + err.message);
@@ -1370,6 +1686,308 @@ document.getElementById('btnReset').addEventListener('click', async ()=>{
 });
 
 document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
+
+/* ======================= TABLEAU DE BORD EXPERT ======================= */
+let adminSub = 'evals';
+let DASH = null;
+let USERS = [];
+
+function fmtDate(d, withTime){
+  if(!d) return '—';
+  const dt = new Date(d);
+  return withTime ? dt.toLocaleString('fr-FR', {dateStyle:'short', timeStyle:'short'}) : dt.toLocaleDateString('fr-FR');
+}
+function jsonOpts(method, body){
+  return {method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)};
+}
+
+document.querySelectorAll('#adminSubtabs button').forEach(b=>{
+  b.addEventListener('click', ()=>{ adminSub = b.dataset.sub; renderAdmin(); });
+});
+
+function renderAdmin(){
+  if(!ME || ME.role !== 'expert') return;
+  document.querySelectorAll('#adminSubtabs button').forEach(b=>b.classList.toggle('active', b.dataset.sub === adminSub));
+  document.querySelectorAll('.admin-sub').forEach(el=>{ el.style.display = el.id === 'sub-' + adminSub ? 'block' : 'none'; });
+  if(adminSub === 'evals') loadDashboard();
+  if(adminSub === 'users') loadUsers();
+  if(adminSub === 'centres') loadCentres();
+}
+
+/* --- Questionnaires --- */
+async function loadDashboard(){
+  try{ DASH = await apiFetch('/admin/dashboard'); }catch(err){ return alert(err.message); }
+  renderDashboard();
+}
+function renderDashboard(){
+  const evs = DASH.evaluations;
+  const base = DASH.base_questions || 1;
+  const enCours = evs.filter(e=>e.status === 'en_cours').length;
+  const termines = evs.length - enCours;
+  const aQualifier = evs.reduce((n,e)=>n + e.a_qualifier, 0);
+  document.getElementById('adminKpis').innerHTML = [
+    [evs.length, 'questionnaires'], [enCours, 'en cours'], [termines, 'terminés'],
+    [aQualifier, 'non-conformités à qualifier'],
+  ].map(([v,l])=>`<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+
+  const q = document.getElementById('evalSearch').value.trim().toLowerCase();
+  const status = document.getElementById('evalStatus').value;
+  const rows = evs.filter(e=>(!status || e.status === status) &&
+    (!q || (e.centre_libelle || 'sans centre').toLowerCase().includes(q)));
+  const tbody = document.getElementById('evalRows');
+  if(!rows.length){
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="7">Aucun questionnaire. Les questionnaires sont créés automatiquement à la première connexion d\'un membre, ou via « Nouveau questionnaire ».</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(e=>{
+    const pct = Math.min(100, Math.round(e.answered / base * 100));
+    return `<tr>
+      <td><strong>${e.centre_libelle ? escapeHtml(e.centre_libelle) : '<em>Sans centre (historique)</em>'}</strong>
+        <div class="muted">${escapeHtml(e.label)} · créé le ${fmtDate(e.created_at)}</div></td>
+      <td><span class="status-pill status-${e.status}">${e.status === 'termine' ? 'Terminé' : 'En cours'}</span>
+        ${e.completed_at ? `<div class="muted">le ${fmtDate(e.completed_at)}</div>` : ''}</td>
+      <td><div class="mini-progress"><div class="track"><div style="width:${pct}%"></div></div>
+        <span title="Réponses saisies / questions de base (hors conditionnelles)">${e.answered}/${base}</span></div></td>
+      <td>${e.non_conformes}${e.a_qualifier ? ` <span class="muted">(${e.a_qualifier} à qualifier)</span>` : ''}</td>
+      <td>${e.membres}</td>
+      <td>${fmtDate(e.last_activity, true)}</td>
+      <td class="actions">
+        ${e.centre_id ? '' : `<button class="btn small ghost" data-attach="${e.id}">Rattacher</button>`}
+        <button class="btn small" data-open="${e.id}">Ouvrir</button>
+        <button class="btn small ghost" data-open-member="${e.id}" title="Ouvrir en simulant la vue d'un membre">Vue membre</button>
+      </td>
+    </tr>`;
+  }).join('');
+  tbody.querySelectorAll('[data-open]').forEach(b=>b.addEventListener('click', ()=>openFromDashboard(+b.dataset.open, 'expert')));
+  tbody.querySelectorAll('[data-open-member]').forEach(b=>b.addEventListener('click', ()=>openFromDashboard(+b.dataset.openMember, 'membre')));
+  tbody.querySelectorAll('[data-attach]').forEach(b=>b.addEventListener('click', ()=>attachEvaluation(+b.dataset.attach)));
+}
+document.getElementById('evalSearch').addEventListener('input', ()=>DASH && renderDashboard());
+document.getElementById('evalStatus').addEventListener('change', ()=>DASH && renderDashboard());
+
+async function openFromDashboard(id, view){
+  try{
+    currentRole = view;
+    await openEvaluation(await apiFetch(`/evaluations/${id}`));
+  }catch(err){ alert(err.message); }
+}
+
+function attachEvaluation(id){
+  openModal(`<h3>Rattacher le questionnaire à un centre</h3>
+    <div class="field"><label>Centre</label>${centrePickerHtml('attachCentre')}</div>
+    <p class="form-error" id="modalError"></p>
+    <div class="modal-actions"><button class="btn ghost" data-close>Annuler</button><button class="btn primary" id="modalOk">Rattacher</button></div>`);
+  const picker = bindCentrePicker('attachCentre');
+  document.getElementById('modalOk').addEventListener('click', async ()=>{
+    if(!picker.value()) return document.getElementById('modalError').textContent = 'Choisissez un centre';
+    try{ await apiFetch(`/admin/evaluations/${id}`, jsonOpts('PATCH', {centre_id: picker.value()})); closeModal(); loadDashboard(); }
+    catch(err){ document.getElementById('modalError').textContent = err.message; }
+  });
+}
+
+document.getElementById('btnNewEval').addEventListener('click', ()=>{
+  openModal(`<h3>Nouveau questionnaire</h3>
+    <p class="form-note">Crée une nouvelle campagne pour un centre. Elle devient le questionnaire de travail de ses membres (les précédentes restent consultables ici).</p>
+    <div class="field"><label>Centre</label>${centrePickerHtml('newEvalCentre')}</div>
+    <div class="field"><label for="newEvalLabel">Intitulé</label><input id="newEvalLabel" value="Auto-évaluation BPP ${new Date().getFullYear()}"></div>
+    <p class="form-error" id="modalError"></p>
+    <div class="modal-actions"><button class="btn ghost" data-close>Annuler</button><button class="btn primary" id="modalOk">Créer</button></div>`);
+  const picker = bindCentrePicker('newEvalCentre');
+  document.getElementById('modalOk').addEventListener('click', async ()=>{
+    if(!picker.value()) return document.getElementById('modalError').textContent = 'Choisissez un centre';
+    try{
+      await apiFetch('/admin/evaluations', jsonOpts('POST', {centre_id: picker.value(), label: document.getElementById('newEvalLabel').value}));
+      closeModal(); loadDashboard();
+    }catch(err){ document.getElementById('modalError').textContent = err.message; }
+  });
+});
+
+/* --- Comptes --- */
+async function loadUsers(){
+  try{ USERS = await apiFetch('/admin/users'); }catch(err){ return alert(err.message); }
+  renderUsers();
+}
+function renderUsers(){
+  const q = document.getElementById('userSearch').value.trim().toLowerCase();
+  const rows = USERS.filter(u=>!q || [u.login, u.nom, u.centre_libelle].join(' ').toLowerCase().includes(q));
+  const tbody = document.getElementById('userRows');
+  tbody.innerHTML = rows.length ? rows.map(u=>`<tr class="${u.active ? '' : 'inactive'}">
+      <td><strong>${escapeHtml(u.login)}</strong>${u.must_change_password ? '<div class="muted">mot de passe provisoire</div>' : ''}</td>
+      <td>${escapeHtml(u.nom)}${u.email ? `<div class="muted">${escapeHtml(u.email)}</div>` : ''}</td>
+      <td>${u.role === 'expert' ? '<span class="member-view-note">Expert</span>' : 'Membre'}</td>
+      <td>${u.centre_libelle ? escapeHtml(u.centre_libelle) : (u.role === 'membre' ? '<span style="color:var(--red)">Non rattaché</span>' : '—')}</td>
+      <td>${fmtDate(u.last_login_at, true)}${u.active ? '' : '<div class="muted">désactivé</div>'}</td>
+      <td class="actions">
+        <button class="btn small ghost" data-edit="${u.id}">Modifier</button>
+        <button class="btn small ghost" data-reset="${u.id}">Nouveau mot de passe</button>
+      </td></tr>`).join('')
+    : '<tr class="empty-row"><td colspan="6">Aucun compte.</td></tr>';
+  tbody.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click', ()=>editUser(USERS.find(u=>u.id === +b.dataset.edit))));
+  tbody.querySelectorAll('[data-reset]').forEach(b=>b.addEventListener('click', ()=>resetUserPassword(USERS.find(u=>u.id === +b.dataset.reset))));
+}
+document.getElementById('userSearch').addEventListener('input', renderUsers);
+
+function userFormHtml(u){
+  u = u || {role:'membre'};
+  return `
+    ${u.id ? '' : '<div class="field"><label for="uLogin">Identifiant (sans espace, ex. prenom.nom)</label><input id="uLogin" autocomplete="off"></div>'}
+    <div class="field"><label for="uNom">Nom et prénom</label><input id="uNom" value="${escapeHtml(u.nom || '')}"></div>
+    <div class="field"><label for="uEmail">E-mail</label><input id="uEmail" type="email" value="${escapeHtml(u.email || '')}"></div>
+    <div class="field"><label for="uRole">Rôle</label><select id="uRole">
+      <option value="membre" ${u.role === 'membre' ? 'selected' : ''}>Membre (répond au questionnaire de son centre)</option>
+      <option value="expert" ${u.role === 'expert' ? 'selected' : ''}>Expert (administration, expertise de tous les centres)</option>
+    </select></div>
+    <div class="field"><label>Centre de rattachement</label>${centrePickerHtml('uCentre', u.centre_id, u.centre_libelle)}</div>`;
+}
+
+document.getElementById('btnNewUser').addEventListener('click', ()=>{
+  openModal(`<h3>Nouveau compte</h3>${userFormHtml()}
+    <p class="form-error" id="modalError"></p>
+    <div class="modal-actions"><button class="btn ghost" data-close>Annuler</button><button class="btn primary" id="modalOk">Créer le compte</button></div>`);
+  const picker = bindCentrePicker('uCentre');
+  document.getElementById('modalOk').addEventListener('click', async ()=>{
+    const role = document.getElementById('uRole').value;
+    if(role === 'membre' && !picker.value()) return document.getElementById('modalError').textContent = 'Un membre doit être rattaché à un centre';
+    try{
+      const res = await apiFetch('/admin/users', jsonOpts('POST', {
+        login: document.getElementById('uLogin').value, role,
+        nom: document.getElementById('uNom').value, email: document.getElementById('uEmail').value,
+        centre_id: picker.value(),
+      }));
+      showCredentials(res, document.getElementById('uNom').value, picker.label(), true);
+      loadUsers();
+    }catch(err){ document.getElementById('modalError').textContent = err.message; }
+  });
+});
+
+function editUser(u){
+  const isMe = u.id === ME.id;
+  openModal(`<h3>Modifier le compte ${escapeHtml(u.login)}</h3>${userFormHtml(u)}
+    ${isMe ? '' : `<label class="check-label"><input type="checkbox" id="uActive" ${u.active ? 'checked' : ''}> Compte actif</label>`}
+    <p class="form-error" id="modalError"></p>
+    <div class="modal-actions"><button class="btn ghost" data-close>Annuler</button><button class="btn primary" id="modalOk">Enregistrer</button></div>`);
+  const picker = bindCentrePicker('uCentre');
+  if(isMe) document.getElementById('uRole').disabled = true;
+  document.getElementById('modalOk').addEventListener('click', async ()=>{
+    const role = document.getElementById('uRole').value;
+    if(role === 'membre' && !picker.value()) return document.getElementById('modalError').textContent = 'Un membre doit être rattaché à un centre';
+    const body = {nom: document.getElementById('uNom').value, email: document.getElementById('uEmail').value, role};
+    if(picker.value()) body.centre_id = picker.value(); else body.detach_centre = true;
+    if(!isMe) body.active = document.getElementById('uActive').checked;
+    try{ await apiFetch(`/admin/users/${u.id}`, jsonOpts('PATCH', body)); closeModal(); loadUsers(); }
+    catch(err){ document.getElementById('modalError').textContent = err.message; }
+  });
+}
+
+async function resetUserPassword(u){
+  if(!confirm(`Générer un nouveau mot de passe provisoire pour ${u.login} ? L'ancien ne fonctionnera plus.`)) return;
+  try{ showCredentials(await apiFetch(`/admin/users/${u.id}/reset-password`, {method:'POST'}), u.nom, u.centre_libelle, false); loadUsers(); }
+  catch(err){ alert(err.message); }
+}
+
+/* Affiche les identifiants à transmettre (une seule fois : le mot de passe n'est pas stocké en clair) */
+function showCredentials(res, nom, centre, isNew){
+  const text = `Bonjour${nom ? ' ' + nom : ''},\n\n` +
+    (isNew ? `Un accès à l'outil d'auto-évaluation BPP de la SFPO a été créé pour vous${centre ? ' (' + centre + ')' : ''}.\n\n`
+           : `Votre mot de passe d'accès à l'outil d'auto-évaluation BPP de la SFPO a été réinitialisé.\n\n`) +
+    `Adresse : ${location.origin}\nIdentifiant : ${res.login}\nMot de passe provisoire : ${res.password}\n\n` +
+    `Vous devrez choisir un mot de passe personnel à la première connexion.`;
+  openModal(`<h3>Identifiants à transmettre</h3>
+    <p class="form-note">Copiez ce message maintenant : le mot de passe provisoire ne sera plus affiché ensuite.</p>
+    <div class="cred-box" id="credText">${escapeHtml(text)}</div>
+    <div class="modal-actions"><button class="btn ghost" id="btnCopyCred">Copier</button><button class="btn primary" data-close>Fermer</button></div>`);
+  document.getElementById('btnCopyCred').addEventListener('click', async (e)=>{
+    try{ await navigator.clipboard.writeText(text); e.target.textContent = 'Copié ✓'; }
+    catch(err){ e.target.textContent = 'Copie impossible : sélectionnez le texte'; }
+  });
+}
+
+/* --- Centres --- */
+let centreTimer = null;
+async function loadCentres(){
+  const q = document.getElementById('centreSearch').value.trim();
+  const actifs = document.getElementById('centreActifs').checked;
+  let rows;
+  try{ rows = await apiFetch(`/admin/centres?limit=100&actifs=${actifs}&q=${encodeURIComponent(q)}`); }
+  catch(err){ return alert(err.message); }
+  const tbody = document.getElementById('centreRows');
+  tbody.innerHTML = rows.length ? rows.map(c=>`<tr>
+      <td>${escapeHtml(c.libelle)}</td><td>${c.finess ? escapeHtml(c.finess) : '<span class="muted">—</span>'}</td>
+      <td>${c.membres}</td><td>${c.questionnaires}</td>
+      <td class="actions"><button class="btn small ghost" data-edit-centre="${c.id}">Modifier</button></td></tr>`).join('')
+    : '<tr class="empty-row"><td colspan="5">Aucun centre trouvé.</td></tr>';
+  document.getElementById('centreNote').textContent = rows.length === 100 ? 'Affichage limité aux 100 premiers résultats : affinez la recherche.' : '';
+  tbody.querySelectorAll('[data-edit-centre]').forEach(b=>b.addEventListener('click', ()=>editCentre(rows.find(c=>c.id === +b.dataset.editCentre))));
+}
+document.getElementById('centreSearch').addEventListener('input', ()=>{ clearTimeout(centreTimer); centreTimer = setTimeout(loadCentres, 250); });
+document.getElementById('centreActifs').addEventListener('change', loadCentres);
+
+function editCentre(c){
+  c = c || {};
+  openModal(`<h3>${c.id ? 'Modifier le centre' : 'Nouveau centre'}</h3>
+    <div class="field"><label for="cLib">Libellé</label><input id="cLib" value="${escapeHtml(c.libelle || '')}"></div>
+    <div class="field"><label for="cFiness">N° FINESS (facultatif)</label><input id="cFiness" value="${escapeHtml(c.finess || '')}"></div>
+    <p class="form-error" id="modalError"></p>
+    <div class="modal-actions"><button class="btn ghost" data-close>Annuler</button><button class="btn primary" id="modalOk">Enregistrer</button></div>`);
+  document.getElementById('modalOk').addEventListener('click', async ()=>{
+    const body = {libelle: document.getElementById('cLib').value, finess: document.getElementById('cFiness').value};
+    try{
+      await apiFetch(c.id ? `/admin/centres/${c.id}` : '/admin/centres', jsonOpts(c.id ? 'PATCH' : 'POST', body));
+      closeModal();
+      if(!c.id) document.getElementById('centreSearch').value = body.libelle;
+      loadCentres();
+    }catch(err){ document.getElementById('modalError').textContent = err.message; }
+  });
+}
+document.getElementById('btnNewCentre').addEventListener('click', ()=>editCentre(null));
+
+/* --- Sélecteur de centre avec recherche (≈1300 centres) --- */
+function centrePickerHtml(id, centreId, libelle){
+  return `<div class="centre-picker" id="${id}" data-value="${centreId || ''}">
+    <input type="search" placeholder="Tapez un nom ou une ville…" value="${escapeHtml(libelle || '')}" autocomplete="off">
+    <div class="results"></div></div>`;
+}
+function bindCentrePicker(id){
+  const root = document.getElementById(id);
+  const input = root.querySelector('input');
+  const results = root.querySelector('.results');
+  let timer = null, chosenLabel = input.value;
+  input.addEventListener('input', ()=>{
+    root.dataset.value = '';
+    clearTimeout(timer);
+    const q = input.value.trim();
+    if(q.length < 2){ results.classList.remove('show'); return; }
+    timer = setTimeout(async ()=>{
+      const rows = await apiFetch(`/admin/centres?limit=30&q=${encodeURIComponent(q)}`);
+      results.innerHTML = rows.length ? rows.map(c=>`<div data-id="${c.id}">${escapeHtml(c.libelle)}</div>`).join('')
+        : '<div class="muted">Aucun centre — créez-le dans l\'onglet Centres</div>';
+      results.classList.add('show');
+      results.querySelectorAll('[data-id]').forEach(d=>d.addEventListener('mousedown', (e)=>{
+        e.preventDefault();
+        root.dataset.value = d.dataset.id;
+        input.value = chosenLabel = d.textContent;
+        results.classList.remove('show');
+      }));
+    }, 200);
+  });
+  input.addEventListener('blur', ()=>results.classList.remove('show'));
+  return {
+    value: ()=> root.dataset.value ? +root.dataset.value : null,
+    label: ()=> root.dataset.value ? chosenLabel : '',
+  };
+}
+
+/* --- Fenêtre modale --- */
+function openModal(html){
+  document.getElementById('modal').innerHTML = html;
+  document.getElementById('modalBg').classList.add('show');
+  document.querySelectorAll('#modal [data-close]').forEach(b=>b.addEventListener('click', closeModal));
+  const first = document.querySelector('#modal input:not([type=checkbox])');
+  if(first) first.focus();
+}
+function closeModal(){ document.getElementById('modalBg').classList.remove('show'); }
+document.getElementById('modalBg').addEventListener('mousedown', (e)=>{ if(e.target.id === 'modalBg') closeModal(); });
+document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
 
 init();
 </script>
