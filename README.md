@@ -177,6 +177,26 @@ Le questionnaire qui existait avant cette évolution apparaît dans le tableau d
 bord comme « Sans centre (historique) » : bouton *Rattacher* pour l'affecter à
 un centre.
 
+## Données personnelles (RGPD)
+
+À la première connexion (après le choix du mot de passe), chaque utilisateur
+doit lire la mention d'information RGPD propre à l'outil et cocher la case
+d'acquittement, qui l'engage aussi à ne saisir aucune donnée patient. Tant que
+ce n'est pas fait, l'API refuse tout accès au questionnaire (contrôle côté
+serveur, pas seulement à l'écran).
+
+- Le texte et sa version sont définis dans `app/rgpd.py` (source unique, servi
+  par `/api/rgpd`). Il complète la politique RGPD générale de la SFPO, à
+  laquelle il renvoie.
+- L'acquittement est stocké sur le compte : `users.rgpd_version` et
+  `users.rgpd_acknowledged_at`, visibles dans *Tableau de bord → Comptes*
+  (colonne RGPD).
+- **Modifier la mention** : éditer `RGPD_HTML` et changer `RGPD_VERSION` dans
+  `app/rgpd.py`. Chaque utilisateur devra alors acquitter la nouvelle version à
+  sa connexion suivante. Seul le dernier acquittement est conservé sur le compte.
+- La mention reste consultable à tout moment via le lien *Données
+  personnelles* en pied de page.
+
 ## Parcours de l'audit
 
 L'onglet *Auto-évaluation* propose deux modes (bascule en haut de page), avec

@@ -168,7 +168,8 @@ class UserUpdate(BaseModel):
 def list_users():
     return fetch_all(
         "SELECT u.id, u.login, u.role, u.nom, u.email, u.centre_id, c.libelle AS centre_libelle, "
-        "u.active, u.must_change_password, u.created_at, u.last_login_at "
+        "u.active, u.must_change_password, u.created_at, u.last_login_at, "
+        "u.rgpd_version, u.rgpd_acknowledged_at "
         "FROM users u LEFT JOIN centres c ON c.id = u.centre_id ORDER BY u.role DESC, u.login"
     )
 

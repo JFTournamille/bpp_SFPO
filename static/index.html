@@ -385,6 +385,17 @@
   .auth-card .btn{width:100%;margin-top:6px;}
   .form-error{color:var(--red);font-size:12.5px;min-height:18px;margin:4px 0 0;}
   .form-note{font-size:12px;color:var(--text-light);margin:0 0 12px;}
+  .auth-card.wide{max-width:680px;}
+  .rgpd-text{font-size:12.5px;line-height:1.5;max-height:50vh;overflow:auto;border:1px solid var(--border);
+    border-radius:10px;padding:4px 16px 8px;margin-bottom:14px;}
+  .rgpd-text h4{font-size:13px;margin:14px 0 4px;color:var(--blue-darker);}
+  .rgpd-text p,.rgpd-text ul{margin:0 0 6px;}
+  .rgpd-text ul{padding-left:18px;}
+  .rgpd-check{display:flex;gap:10px;align-items:flex-start;font-size:13px;font-weight:600;margin-bottom:8px;cursor:pointer;}
+  .rgpd-check input{margin-top:3px;flex-shrink:0;}
+  .auth-card .btn:disabled{opacity:.5;cursor:not-allowed;}
+  .proof-warning{display:block;font-size:11px;color:var(--text-light);margin-top:4px;}
+  footer.site a{color:inherit;}
 
   .user-chip{font-size:12px;color:var(--text-light);text-align:right;line-height:1.3;max-width:260px;}
   .user-chip strong{color:var(--text);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -549,7 +560,7 @@
           <button class="btn small primary" id="btnNewUser" type="button">+ Nouveau compte</button>
         </div>
         <table class="admin">
-          <thead><tr><th>Identifiant</th><th>Nom</th><th>Rôle</th><th>Centre</th><th>Dernière connexion</th><th></th></tr></thead>
+          <thead><tr><th>Identifiant</th><th>Nom</th><th>Rôle</th><th>Centre</th><th>Dernière connexion</th><th>RGPD</th><th></th></tr></thead>
           <tbody id="userRows"></tbody>
         </table>
       </div>
@@ -676,14 +687,24 @@
     <p class="form-error" id="pwdError"></p>
     <button class="btn primary" type="submit">Valider</button>
   </form>
+  <form class="auth-card wide" id="rgpdForm" style="display:none;">
+    <img src="assets/logo_sfpo.png" alt="SFPO">
+    <h2 id="rgpdTitle">Données personnelles</h2>
+    <p class="sub">Merci de lire les informations ci-dessous avant d'accéder au questionnaire.</p>
+    <div class="rgpd-text" id="rgpdText"></div>
+    <label class="rgpd-check"><input type="checkbox" id="rgpdCheck"> <span id="rgpdCheckLabel"></span></label>
+    <p class="form-error" id="rgpdError"></p>
+    <button class="btn primary" type="submit" id="rgpdSubmit" disabled>Accéder au questionnaire</button>
+  </form>
 </div>
 
 <div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
 
-<footer class="site">Outil d'auto-évaluation interne — SFPO · Données stockées dans PostgreSQL (API FastAPI)</footer>
+<footer class="site">Outil d'auto-évaluation interne — SFPO · <a href="#" id="rgpdLink">Données personnelles</a></footer>
 
 <script>
 const API = '/api';
+const RGPD_REQUIRED = 'Acquittement de la mention RGPD requis';
 const RESPONSE_LABELS = {oui:'Oui', non:'Non', partiel:'Partiellement', na:'Non applicable'};
 const RESPONSE_POINTS = {oui:1, non:0, partiel:0.5};
 
@@ -835,6 +856,8 @@ async function apiFetch(path, options){
   if(!res.ok){
     let detail = res.statusText;
     try{ detail = (await res.json()).detail || detail; }catch(e){}
+    // nouvelle version de la mention publiée en cours de session : nouvel acquittement
+    if(res.status === 403 && detail === RGPD_REQUIRED) showRgpd();
     throw new Error(detail);
   }
   if(res.status === 204) return null;
@@ -853,14 +876,68 @@ function showLogin(){
   document.getElementById('authScreen').style.display = 'flex';
   document.getElementById('loginForm').style.display = 'block';
   document.getElementById('pwdForm').style.display = 'none';
+  document.getElementById('rgpdForm').style.display = 'none';
   document.getElementById('loginInput').focus();
 }
 function showPasswordChange(){
   document.getElementById('authScreen').style.display = 'flex';
   document.getElementById('loginForm').style.display = 'none';
   document.getElementById('pwdForm').style.display = 'block';
+  document.getElementById('rgpdForm').style.display = 'none';
   document.getElementById('pwdCurrent').focus();
 }
+
+let RGPD_NOTICE = null;
+async function loadRgpdNotice(){
+  if(!RGPD_NOTICE) RGPD_NOTICE = await apiFetch('/rgpd');
+  return RGPD_NOTICE;
+}
+async function showRgpd(){
+  document.getElementById('authScreen').style.display = 'flex';
+  document.getElementById('loginForm').style.display = 'none';
+  document.getElementById('pwdForm').style.display = 'none';
+  document.getElementById('rgpdForm').style.display = 'block';
+  document.getElementById('rgpdCheck').checked = false;
+  document.getElementById('rgpdSubmit').disabled = true;
+  try{
+    const n = await loadRgpdNotice();
+    document.getElementById('rgpdTitle').textContent = n.title;
+    document.getElementById('rgpdText').innerHTML = n.html; // texte statique fourni par le serveur
+    document.getElementById('rgpdCheckLabel').textContent = n.checkbox;
+  }catch(ex){ document.getElementById('rgpdError').textContent = ex.message; }
+}
+// étape suivant la connexion : mot de passe provisoire -> mention RGPD -> application
+function continueAfterAuth(me){
+  if(me.must_change_password) return showPasswordChange();
+  if(me.must_acknowledge_rgpd) return showRgpd();
+  start(me);
+}
+
+document.getElementById('rgpdCheck').addEventListener('change', (e)=>{
+  document.getElementById('rgpdSubmit').disabled = !e.target.checked;
+});
+document.getElementById('rgpdForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const err = document.getElementById('rgpdError');
+  err.textContent = '';
+  if(!document.getElementById('rgpdCheck').checked) return;
+  try{
+    await apiFetch('/auth/rgpd', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({version: RGPD_NOTICE.version})});
+    continueAfterAuth(await apiFetch('/auth/me'));
+  }catch(ex){
+    err.textContent = ex.message;
+    if(ex.message.startsWith('La mention a été mise à jour')){ RGPD_NOTICE = null; showRgpd(); }
+  }
+});
+document.getElementById('rgpdLink').addEventListener('click', async (e)=>{
+  e.preventDefault();
+  try{
+    const n = await loadRgpdNotice();
+    openModal(`<h3>${escapeHtml(n.title)}</h3><div class="rgpd-text">${n.html}</div>
+      <div class="modal-actions"><button class="btn primary" type="button" onclick="closeModal()">Fermer</button></div>`);
+  }catch(ex){ alert(ex.message); }
+});
 
 document.getElementById('loginForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
@@ -871,8 +948,8 @@ document.getElementById('loginForm').addEventListener('submit', async (e)=>{
       body: JSON.stringify({login: document.getElementById('loginInput').value, password: document.getElementById('passwordInput').value})});
     const typed = document.getElementById('passwordInput').value;
     document.getElementById('passwordInput').value = '';
-    if(me.must_change_password){ document.getElementById('pwdCurrent').value = typed; showPasswordChange(); }
-    else start(me);
+    if(me.must_change_password) document.getElementById('pwdCurrent').value = typed;
+    continueAfterAuth(me);
   }catch(ex){ err.textContent = ex.message; }
 });
 
@@ -886,7 +963,7 @@ document.getElementById('pwdForm').addEventListener('submit', async (e)=>{
     await apiFetch('/auth/password', {method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({current_password: document.getElementById('pwdCurrent').value, new_password: n1})});
     ['pwdCurrent','pwdNew','pwdNew2'].forEach(id=>document.getElementById(id).value='');
-    start(await apiFetch('/auth/me'));
+    continueAfterAuth(await apiFetch('/auth/me'));
   }catch(ex){ err.textContent = ex.message; }
 });
 
@@ -905,8 +982,7 @@ async function init(){
     document.getElementById('errorNote').style.display = 'block';
     return;
   }
-  if(me.must_change_password) return showPasswordChange();
-  start(me);
+  continueAfterAuth(me);
 }
 
 async function start(me){
@@ -1210,6 +1286,7 @@ function renderQuestionCard(q, depth){
           </span>
         </div>
         <input type="text" class="txt-preuve" placeholder="Référence / description de la preuve..." value="${escapeHtml(st.preuve_texte)}">
+        <span class="proof-warning">Documents anonymisés uniquement : aucune donnée patient.</span>
         <span class="upload-status"></span>
       </div>
     </div>
@@ -1817,11 +1894,12 @@ function renderUsers(){
       <td>${u.role === 'expert' ? '<span class="member-view-note">Expert</span>' : 'Membre'}</td>
       <td>${u.centre_libelle ? escapeHtml(u.centre_libelle) : (u.role === 'membre' ? '<span style="color:var(--red)">Non rattaché</span>' : '—')}</td>
       <td>${fmtDate(u.last_login_at, true)}${u.active ? '' : '<div class="muted">désactivé</div>'}</td>
+      <td>${u.rgpd_acknowledged_at ? fmtDate(u.rgpd_acknowledged_at, true) + `<div class="muted">version ${escapeHtml(u.rgpd_version)}</div>` : '<span class="muted">non acquittée</span>'}</td>
       <td class="actions">
         <button class="btn small ghost" data-edit="${u.id}">Modifier</button>
         <button class="btn small ghost" data-reset="${u.id}">Nouveau mot de passe</button>
       </td></tr>`).join('')
-    : '<tr class="empty-row"><td colspan="6">Aucun compte.</td></tr>';
+    : '<tr class="empty-row"><td colspan="7">Aucun compte.</td></tr>';
   tbody.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click', ()=>editUser(USERS.find(u=>u.id === +b.dataset.edit))));
   tbody.querySelectorAll('[data-reset]').forEach(b=>b.addEventListener('click', ()=>resetUserPassword(USERS.find(u=>u.id === +b.dataset.reset))));
 }
