@@ -25,6 +25,7 @@ app/db.py           Connexion PostgreSQL (pool psycopg2)
 static/index.html    Page web (Auto-évaluation / Analyse & Expertise / Statistiques)
 static/assets/       Logo SFPO
 schema.sql           Schéma PostgreSQL + données de référence (chapitres/questions)
+migrations/          Scripts SQL à appliquer sur une base déjà initialisée
 Dockerfile           Image de l'application (utilisée par CapRover)
 captain-definition   Fichier requis par CapRover pour builder le Dockerfile
 requirements.txt     Dépendances Python
@@ -126,6 +127,30 @@ export DATABASE_URL="postgresql:///votre_base"
 uvicorn app.main:app --reload --port 8000
 # → http://localhost:8000
 ```
+
+## Mise à jour d'une base existante
+
+`schema.sql` ne sert qu'à l'initialisation. Les évolutions de la base sont des
+scripts `migrations/*.sql` **appliqués automatiquement au démarrage de
+l'application** (ordre alphabétique, une seule fois chacun — suivi dans la table
+`schema_migrations`). Un simple redéploiement suffit, aucun accès au serveur
+n'est nécessaire. En cas d'échec, l'erreur apparaît dans les logs de l'app
+CapRover et la migration est retentée au démarrage suivant.
+
+Pour ajouter une évolution : créer `migrations/002_xxx.sql` (idéalement
+idempotent), puis redéployer.
+
+## Parcours de l'audit
+
+L'onglet *Auto-évaluation* propose deux modes (bascule en haut de page), avec
+le menu de navigation à gauche :
+- **Par thématique** : sections de 1er niveau du référentiel Excel ;
+- **Par chapitre BPP** : questions regroupées selon le chapitre de leur
+  référence BPP principale (1 à 9, LD1, LD2, LD3), triées par article. Les
+  sous-questions suivent leur question chapeau.
+
+Les réponses sont communes aux deux modes. Le mode et la rubrique ouverte sont
+mémorisés dans le navigateur.
 
 ## Modèle de données
 

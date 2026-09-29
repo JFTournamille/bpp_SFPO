@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from app.db import fetch_all, fetch_one, execute
+from app.migrations import run_migrations
 
 UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "/app/uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -17,6 +18,12 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 Mo
 
 app = FastAPI(title="Auto-évaluation BPP - API")
+
+try:
+    run_migrations()
+except Exception:  # base injoignable au démarrage : l'API répondra en erreur, migrations retentées au prochain démarrage
+    import logging
+    logging.getLogger("uvicorn.error").exception("Migrations non appliquées")
 
 
 # ------------------------------------------------------------------

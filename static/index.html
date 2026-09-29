@@ -43,7 +43,7 @@
     -webkit-font-smoothing:antialiased;
   }
   a{color:var(--blue-dark);}
-  .wrap{max-width:980px;margin:0 auto;padding:0 20px;}
+  .wrap{max-width:1320px;margin:0 auto;padding:0 20px;}
 
   /* ===== Header ===== */
   header.site{
@@ -120,18 +120,54 @@
   .save-indicator.error::before{content:"● ";color:var(--red);}
   .save-indicator.saving::before{content:"● ";color:var(--orange);}
 
-  /* chapter mini nav */
-  .chapter-nav{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
-  .chapter-nav a{
-    font-size:11.5px;padding:5px 12px;border-radius:var(--radius-pill);
-    background:var(--bg-soft-2);color:var(--text-light);text-decoration:none;
-    border:1px solid transparent;
-    display:inline-flex;align-items:center;gap:5px;max-width:190px;
+  /* ===== Mode d'audit (thématique / chapitre BPP) ===== */
+  .mode-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;}
+  .mode-row .label{font-size:13px;font-weight:600;color:var(--text);}
+  .mode-switch{display:flex;background:var(--bg-soft-2);border-radius:var(--radius-pill);padding:3px;gap:2px;}
+  .mode-switch button{
+    font-family:inherit;font-size:13px;font-weight:600;padding:8px 18px;border:none;
+    border-radius:var(--radius-pill);background:transparent;color:var(--text-light);
+    cursor:pointer;transition:all .15s;white-space:nowrap;
   }
-  .chapter-nav a:hover{border-color:var(--blue);color:var(--blue-dark);}
-  .chapter-nav a .n{flex:none;font-weight:700;color:var(--blue-dark);margin-right:1px;}
-  .chapter-nav a .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .chapter-nav a .p{flex:none;font-size:10px;font-weight:700;color:var(--text-light);}
+  .mode-switch button.active{background:#fff;color:var(--blue-dark);box-shadow:var(--shadow);}
+  .mode-switch button:hover:not(.active){color:var(--blue-dark);}
+
+  /* ===== Mise en page : menu à gauche + contenu ===== */
+  .audit-layout{display:grid;grid-template-columns:300px minmax(0,1fr);gap:28px;align-items:start;}
+  .audit-side{
+    position:sticky;top:var(--sticky-top,90px);
+    max-height:calc(100vh - var(--sticky-top,90px) - 16px);overflow-y:auto;
+    padding-right:4px;
+  }
+  .audit-side .side-title{
+    font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--text-light);margin:4px 0 10px 12px;
+  }
+  .side-item{
+    display:block;width:100%;text-align:left;font-family:inherit;
+    background:transparent;border:1px solid transparent;border-radius:12px;
+    padding:10px 12px 11px;margin-bottom:4px;cursor:pointer;color:var(--text);
+    transition:background .12s,border-color .12s;
+  }
+  .side-item:hover{background:#fff;border-color:var(--border);}
+  .side-item.active{background:#fff;border-color:var(--blue);box-shadow:var(--shadow);}
+  .side-item .row{display:flex;align-items:center;gap:8px;}
+  .side-item .t{flex:1;min-width:0;font-size:13.5px;font-weight:600;line-height:1.3;}
+  .side-item.active .t{color:var(--blue-dark);}
+  .side-item .c{
+    flex:none;font-size:11px;font-weight:700;color:var(--text-light);
+    background:var(--bg-soft-2);padding:2px 9px;border-radius:var(--radius-pill);
+  }
+  .side-item.done .c{background:var(--green-bg);color:var(--green);}
+  .side-item .bar{height:4px;border-radius:var(--radius-pill);background:var(--bg-soft-2);margin-top:8px;overflow:hidden;}
+  .side-item .bar > div{height:100%;width:0;background:linear-gradient(90deg,var(--blue),var(--fuchsia));transition:width .25s ease;}
+
+  .group-head{margin-bottom:18px;}
+  .group-head .kicker{font-size:12.5px;font-weight:700;color:var(--fuchsia);text-transform:uppercase;letter-spacing:.05em;}
+  .group-head h2{margin:2px 0 12px;font-size:24px;font-weight:700;color:var(--text);line-height:1.25;}
+  .group-head .progress-row{margin:0;}
+  .group-nav{display:flex;justify-content:space-between;gap:10px;margin-top:22px;}
+  .group-nav .btn{max-width:48%;overflow:hidden;text-overflow:ellipsis;}
 
   main{padding:26px 0 80px;}
 
@@ -139,21 +175,6 @@
   #errorNote{display:none;color:var(--red);}
 
   /* ===== Questionnaire ===== */
-  .chapter-block{margin-bottom:26px;}
-  .chapter-head{
-    display:flex;align-items:center;gap:12px;
-    background:linear-gradient(90deg,var(--blue),var(--fuchsia));
-    color:#fff;border-radius:var(--radius);
-    padding:14px 20px;margin-bottom:14px;
-    box-shadow:var(--shadow);
-  }
-  .chapter-head .num{
-    font-weight:700;font-size:13px;background:rgba(255,255,255,.22);
-    padding:4px 11px;border-radius:var(--radius-pill);
-  }
-  .chapter-head h2{margin:0;font-size:16px;font-weight:600;flex:1;}
-  .chapter-head .chapter-progress{font-size:12px;opacity:.9;white-space:nowrap;}
-
   .subchapter{margin-bottom:18px;}
   .subchapter h3, h3.subchapter-title{
     font-size:13.5px;font-weight:700;color:var(--blue-dark);
@@ -172,7 +193,7 @@
     padding:16px 18px;margin-bottom:12px;
     box-shadow:var(--shadow);
     transition:border-color .15s;
-    scroll-margin-top:220px;
+    scroll-margin-top:var(--sticky-top,90px);
   }
   .qcard.answered{border-left:4px solid var(--blue);}
   .qcard[data-reponse="oui"]{border-left:4px solid var(--green);}
@@ -328,8 +349,15 @@
 
   footer.site{text-align:center;font-size:11.5px;color:var(--text-light);padding:24px 0 40px;}
 
+  @media (max-width:900px){
+    .audit-layout{grid-template-columns:1fr;gap:16px;}
+    .audit-side{position:static;max-height:260px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:10px 8px;}
+  }
   @media (max-width:640px){
     .header-inner{flex-wrap:wrap;}
+    .group-head h2{font-size:20px;}
+    .progress-panel .progress-row{flex-wrap:wrap;}
+    .progress-panel .progress-track{order:3;flex-basis:100%;}
     .answers label{min-width:80px;font-size:11.5px;padding:8px 4px;}
     .bar-row .bname{width:140px;font-size:11.5px;}
   }
@@ -364,13 +392,19 @@
 
 <div class="progress-panel" id="progressPanel" style="display:none;">
   <div class="wrap">
+    <div class="mode-row">
+      <span class="label">Réaliser l'audit</span>
+      <div class="mode-switch" id="modeSwitch">
+        <button type="button" class="mode-btn active" data-mode="theme">Par thématique</button>
+        <button type="button" class="mode-btn" data-mode="chapter">Par chapitre BPP</button>
+      </div>
+    </div>
     <div class="progress-row">
-      <span class="label">Progression du questionnaire</span>
+      <span class="label">Progression globale</span>
       <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
       <span class="pct" id="progressPct">0%</span>
       <span class="save-indicator" id="saveIndicator">Connexion...</span>
     </div>
-    <div class="chapter-nav" id="chapterNav"></div>
   </div>
 </div>
 
@@ -380,7 +414,29 @@
 <main id="mainContent" style="display:none;">
   <div class="wrap">
 
-    <section id="tab-questionnaire" class="tab-panel"></section>
+    <section id="tab-questionnaire" class="tab-panel">
+      <div class="audit-layout">
+        <aside class="audit-side">
+          <div class="side-title" id="sideTitle">Thématiques</div>
+          <div id="sideNav"></div>
+        </aside>
+        <div class="audit-content">
+          <div class="group-head">
+            <div class="kicker" id="groupKicker"></div>
+            <h2 id="groupTitle"></h2>
+            <div class="progress-row">
+              <div class="progress-track"><div class="progress-fill" id="groupFill" style="width:0%"></div></div>
+              <span class="pct" id="groupPct"></span>
+            </div>
+          </div>
+          <div id="groupBody"></div>
+          <div class="group-nav">
+            <button type="button" class="btn ghost small" id="btnPrevGroup"></button>
+            <button type="button" class="btn small" id="btnNextGroup"></button>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <section id="tab-analysis" class="tab-panel" style="display:none;">
       <div class="analysis-toolbar">
@@ -423,7 +479,7 @@
     <section id="tab-stats" class="tab-panel" style="display:none;">
       <div class="stats-grid" id="statsCards"></div>
       <div class="panel">
-        <h3>Score de conformité par chapitre</h3>
+        <h3>Score de conformité par thématique</h3>
         <div id="statsBars"></div>
         <div class="legend">
           <span><span class="dot" style="background:var(--green)"></span> ≥ 80% conforme</span>
@@ -457,21 +513,77 @@ let QUESTION_BY_ID = {};
 let EVALUATION_ID = null;
 let state = {}; // question_id -> response object (snake_case, mirrors API)
 let currentRole = 'membre'; // 'membre' | 'expert' — écran uniquement pour l'instant, pas d'authentification
+let ROOT_QUESTIONS = []; // questions de 1er niveau (avec leurs sous-questions), dans l'ordre du référentiel
+
+/* Deux façons de parcourir l'audit :
+   - 'theme'   : par thématique = sections de 1er niveau du référentiel Excel ;
+   - 'chapter' : par chapitre BPP = chapitre de la réf. BPP principale de la question
+                 (les sous-questions suivent leur question chapeau). */
+const BPP_CHAPTERS = [
+  {key:'1',   title:'Management du système qualité pharmaceutique'},
+  {key:'2',   title:'Personnel'},
+  {key:'3',   title:'Locaux et matériel'},
+  {key:'4',   title:'Documentation'},
+  {key:'5',   title:"Opérations conduisant à la réalisation d'une préparation pharmaceutique"},
+  {key:'6',   title:'Contrôle de la qualité'},
+  {key:'7',   title:'Activités externalisées'},
+  {key:'8',   title:'Réclamations et rappels'},
+  {key:'9',   title:'Auto-inspection'},
+  {key:'LD1', title:'Préparations stériles - LD1'},
+  {key:'LD2', title:'Substances à risque (CMR) - LD2'},
+  {key:'LD3', title:'Essais cliniques - LD3'},
+];
+let auditMode = 'theme';
+let currentGroupKey = {theme:null, chapter:null};
+try{
+  const saved = JSON.parse(localStorage.getItem('bpp-audit-nav') || '{}');
+  if(saved.mode === 'theme' || saved.mode === 'chapter') auditMode = saved.mode;
+  if(saved.groups) currentGroupKey = Object.assign(currentGroupKey, saved.groups);
+}catch(e){}
+function saveNavPrefs(){
+  try{ localStorage.setItem('bpp-audit-nav', JSON.stringify({mode:auditMode, groups:currentGroupKey})); }catch(e){}
+}
+
+function primaryRef(q){ return String((q.refs && q.refs.length) ? q.refs[0] : (q.ref || '')).trim(); }
+function refChapter(q){
+  const m = /^(LD\d+|\d+)/i.exec(primaryRef(q));
+  return m ? m[1].toUpperCase() : 'autre';
+}
+function refArticle(q){
+  const m = /^(?:LD\d+|\d+)\.(\d+)/i.exec(primaryRef(q));
+  return m ? parseInt(m[1], 10) : Infinity;
+}
+
+/* Les titres du référentiel sont en majuscules : on les passe en casse phrase
+   pour le menu et les en-têtes, en conservant sigles et références. */
+const KEEP_UPPER = new Set(['BPP','CMR','MPUP','ZAC','PUI','OGM','MTI','EPI','EPC','PRP','DUERP','ISO','ANSM','SQP']);
+function displayTitle(t){
+  if(!t || t !== t.toUpperCase()) return t || '';
+  const out = t.toLowerCase().split(' ').map(w=>{
+    const bare = w.replace(/[^\p{L}\d]/gu, '').toUpperCase();
+    return (/\d/.test(w) || KEEP_UPPER.has(bare)) ? w.toUpperCase() : w;
+  }).join(' ');
+  return out.charAt(0).toUpperCase() + out.slice(1);
+}
 
 /* Aplatit l'arbre de sections renvoyé par /api/questionnaire : associe à chaque
    question son chapitre (section de niveau 1) et sa section immédiate, en conservant
    l'ordre du document (questions propres à une section avant ses sous-sections). */
-function flattenQuestions(q, section, chapterNum, chapterTitle, sub, depth, out){
+function flattenQuestions(q, section, chapterNum, chapterTitle, sub, depth, out, bppChap){
+  if(depth === 0){
+    bppChap = refChapter(q);
+    ROOT_QUESTIONS.push({node:q, chapterNum, bppChap, article:refArticle(q)});
+  }
   const flat = Object.assign({}, q, {
     sectionId: section.id, sectionTitle: section.title,
     chapterNum, chapterTitle,
     subId: sub ? sub.id : null, subTitle: sub ? sub.title : null,
-    depth,
+    depth, bppChap,
   });
   delete flat.children;
   out.push(flat);
   QUESTION_BY_ID[flat.id] = flat;
-  (q.children||[]).forEach(c=>flattenQuestions(c, section, chapterNum, chapterTitle, sub, depth+1, out));
+  (q.children||[]).forEach(c=>flattenQuestions(c, section, chapterNum, chapterTitle, sub, depth+1, out, bppChap));
 }
 function flattenSection(section, chapterNum, chapterTitle, sub, out){
   section.questions.forEach(q=>flattenQuestions(q, section, chapterNum, chapterTitle, sub, 0, out));
@@ -480,7 +592,9 @@ function flattenSection(section, chapterNum, chapterTitle, sub, out){
 function buildAllQuestions(){
   ALL_QUESTIONS = [];
   QUESTION_BY_ID = {};
+  ROOT_QUESTIONS = [];
   SECTIONS.forEach((ch, i)=>flattenSection(ch, i+1, ch.title, null, ALL_QUESTIONS));
+  ALL_QUESTIONS.forEach(q=>{ q.isBase = isBaseQuestion(q); });
 }
 
 /* Une question n'est visible que si sa condition de dépendance est remplie
@@ -499,6 +613,26 @@ function isVisible(q){
   return true;
 }
 function visibleQuestions(){ return ALL_QUESTIONS.filter(isVisible); }
+
+/* Question « de base » : affichée sur un questionnaire vierge, c.-à-d. sans
+   condition d'affichage, ni pour elle ni pour ses questions chapeau. */
+function isBaseQuestion(q){
+  for(let cur = q; cur; cur = cur.parentQuestionId ? QUESTION_BY_ID[cur.parentQuestionId] : null){
+    if(cur.dependsOnQuestionId) return false;
+  }
+  return true;
+}
+
+/* Compteur : réponses / questions de base (+ conditionnelles actuellement affichées) */
+function countLabel(qs){
+  const done = qs.filter(q=>qState(q.id).reponse).length;
+  const base = qs.filter(q=>q.isBase).length;
+  const cond = qs.length - base;
+  const pct = qs.length ? Math.round(done/qs.length*100) : 0;
+  return {done, base, cond, total: qs.length, pct,
+          text: done + '/' + base + (cond ? ' +' + cond : ''),
+          title: base + ' question(s) sans condition' + (cond ? ' + ' + cond + ' question(s) conditionnelle(s) affichée(s)' : '')};
+}
 
 function defaultQState(){
   return {
@@ -591,39 +725,107 @@ async function persist(qid){
 /* ======================= RENDER: QUESTIONNAIRE ======================= */
 let QITEM_EL = {}; // question_id -> élément conteneur (carte + sous-questions), pour la visibilité conditionnelle
 
-function renderQuestionnaire(){
-  const root = document.getElementById('tab-questionnaire');
-  const navRoot = document.getElementById('chapterNav');
-  root.innerHTML = '';
-  navRoot.innerHTML = '';
-  QITEM_EL = {};
-
-  SECTIONS.forEach((ch, i)=>{
-    const chapterNum = i + 1;
-    const chId = 'chap-' + ch.id;
-    const navA = document.createElement('a');
-    navA.href = '#' + chId;
-    navA.title = ch.title;
-    navA.innerHTML = `<span class="n">${chapterNum}</span><span class="t">${escapeHtml(ch.title)}</span><span class="p" data-chap-nav="${chapterNum}"></span>`;
-    navRoot.appendChild(navA);
-
-    const chBlock = document.createElement('div');
-    chBlock.className = 'chapter-block';
-    chBlock.id = chId;
-
-    const head = document.createElement('div');
-    head.className = 'chapter-head';
-    head.innerHTML = `
-      <span class="num">${chapterNum}</span>
-      <h2>${escapeHtml(ch.title)}</h2>
-      <span class="chapter-progress" data-chap="${chapterNum}">0/0</span>
-    `;
-    chBlock.appendChild(head);
-    renderSectionBody(ch, chBlock, 1);
-
-    root.appendChild(chBlock);
-  });
+function auditGroups(){
+  if(auditMode === 'theme'){
+    return SECTIONS.map((ch, i)=>({
+      key: 't' + ch.id, kicker: 'Thématique', title: displayTitle(ch.title),
+      match: q=>q.chapterNum === i+1, section: ch,
+    }));
+  }
+  const chapters = BPP_CHAPTERS.slice();
+  if(ROOT_QUESTIONS.some(r=>r.bppChap === 'autre')) chapters.push({key:'autre', title:'Sans référence BPP'});
+  return chapters
+    .filter(c=>ROOT_QUESTIONS.some(r=>r.bppChap === c.key))
+    .map(c=>({
+      key: 'c' + c.key, bppChap: c.key,
+      kicker: c.key === 'autre' ? 'Chapitre BPP' : (c.key.startsWith('LD') ? 'Ligne directrice ' + c.key : 'Chapitre BPP ' + c.key),
+      title: c.title, sideTitle: /^\d+$/.test(c.key) ? c.key + '. ' + c.title : c.title,
+      match: q=>q.bppChap === c.key,
+    }));
 }
+function currentGroup(groups){
+  groups = groups || auditGroups();
+  return groups.find(g=>g.key === currentGroupKey[auditMode]) || groups[0];
+}
+
+function renderQuestionnaire(){
+  const groups = auditGroups();
+  const group = currentGroup(groups);
+  currentGroupKey[auditMode] = group ? group.key : null;
+
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('active', b.dataset.mode === auditMode));
+  document.getElementById('sideTitle').textContent = auditMode === 'theme' ? 'Thématiques' : 'Chapitres BPP';
+
+  const side = document.getElementById('sideNav');
+  side.innerHTML = '';
+  groups.forEach(g=>{
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'side-item' + (group && g.key === group.key ? ' active' : '');
+    btn.dataset.group = g.key;
+    btn.title = g.title;
+    btn.innerHTML = `<div class="row"><span class="t">${escapeHtml(g.sideTitle || g.title)}</span><span class="c"></span></div><div class="bar"><div></div></div>`;
+    btn.addEventListener('click', ()=>selectGroup(g.key));
+    side.appendChild(btn);
+  });
+
+  const body = document.getElementById('groupBody');
+  body.innerHTML = '';
+  QITEM_EL = {};
+  if(!group) return;
+  document.getElementById('groupKicker').textContent = group.kicker;
+  document.getElementById('groupTitle').textContent = group.title;
+
+  if(group.section){
+    renderSectionBody(group.section, body, 1);
+  } else {
+    // Par chapitre BPP : questions triées dans l'ordre des articles (tri stable → ordre du référentiel à article égal)
+    const roots = ROOT_QUESTIONS.filter(r=>r.bppChap === group.bppChap)
+      .sort((x, y)=>x.article === y.article ? 0 : (x.article < y.article ? -1 : 1));
+    const scDiv = document.createElement('div');
+    scDiv.className = 'subchapter';
+    roots.forEach(r=>scDiv.appendChild(buildQuestionItem(r.node, 0)));
+    body.appendChild(scDiv);
+  }
+
+  const idx = groups.indexOf(group);
+  const prev = groups[idx-1], next = groups[idx+1];
+  const btnPrev = document.getElementById('btnPrevGroup');
+  const btnNext = document.getElementById('btnNextGroup');
+  btnPrev.style.visibility = prev ? 'visible' : 'hidden';
+  btnNext.style.visibility = next ? 'visible' : 'hidden';
+  btnPrev.textContent = prev ? '← ' + (prev.sideTitle || prev.title) : '';
+  btnNext.textContent = next ? (next.sideTitle || next.title) + ' →' : '';
+  btnPrev.onclick = prev ? ()=>selectGroup(prev.key) : null;
+  btnNext.onclick = next ? ()=>selectGroup(next.key) : null;
+}
+
+function selectGroup(key){
+  currentGroupKey[auditMode] = key;
+  saveNavPrefs();
+  renderQuestionnaire();
+  refreshVisibility();
+  updateProgress();
+  const layout = document.querySelector('.audit-layout');
+  const top = layout.getBoundingClientRect().top + window.scrollY - stickyTop();
+  if(window.scrollY > top) window.scrollTo({top, behavior:'smooth'});
+}
+
+function setAuditMode(mode){
+  if(mode === auditMode) return;
+  auditMode = mode;
+  saveNavPrefs();
+  renderQuestionnaire();
+  refreshVisibility();
+  updateProgress();
+}
+document.querySelectorAll('.mode-btn').forEach(b=>b.addEventListener('click', ()=>setAuditMode(b.dataset.mode)));
+
+/* Décalage sous l'en-tête collant, pour le menu latéral et l'ancrage des cartes */
+function stickyTop(){ return document.querySelector('header.site').offsetHeight + 16; }
+function updateStickyTop(){ document.documentElement.style.setProperty('--sticky-top', stickyTop() + 'px'); }
+window.addEventListener('resize', updateStickyTop);
+updateStickyTop();
 
 /* Rend récursivement le contenu d'une section (niveau >= 1) : ses questions propres,
    puis ses sous-sections (dans l'ordre du référentiel d'origine). */
@@ -792,25 +994,30 @@ document.addEventListener('click', (e)=>{
 /* ======================= PROGRESS ======================= */
 function updateProgress(){
   const visible = visibleQuestions();
-  const answered = visible.filter(q=>qState(q.id).reponse).length;
-  const total = visible.length;
-  const pct = total ? Math.round(answered/total*100) : 0;
-  document.getElementById('progressFill').style.width = pct + '%';
-  document.getElementById('progressPct').textContent = answered + '/' + total + ' — ' + pct + '%';
+  const all = countLabel(visible);
+  document.getElementById('progressFill').style.width = all.pct + '%';
+  const pctEl = document.getElementById('progressPct');
+  pctEl.textContent = all.done + '/' + all.base + (all.cond ? ' + ' + all.cond + ' conditionnelle' + (all.cond>1?'s':'') : '') + ' — ' + all.pct + '%';
+  pctEl.title = all.title;
 
-  const byChapter = {};
-  visible.forEach(q=>{
-    byChapter[q.chapterNum] = byChapter[q.chapterNum] || {answered:0, total:0};
-    byChapter[q.chapterNum].total++;
-    if(qState(q.id).reponse) byChapter[q.chapterNum].answered++;
-  });
-  SECTIONS.forEach((ch, i)=>{
-    const chapterNum = i + 1;
-    const c = byChapter[chapterNum] || {answered:0, total:0};
-    const el = document.querySelector('.chapter-progress[data-chap="'+chapterNum+'"]');
-    if(el) el.textContent = c.answered + '/' + c.total;
-    const navEl = document.querySelector('.p[data-chap-nav="'+chapterNum+'"]');
-    if(navEl) navEl.textContent = c.answered + '/' + c.total;
+  const groups = auditGroups();
+  const current = currentGroup(groups);
+  groups.forEach(g=>{
+    const c = countLabel(visible.filter(g.match));
+    const item = document.querySelector('.side-item[data-group="'+g.key+'"]');
+    if(item){
+      const badge = item.querySelector('.c');
+      badge.textContent = c.text;
+      badge.title = c.title;
+      item.querySelector('.bar > div').style.width = c.pct + '%';
+      item.classList.toggle('done', c.total > 0 && c.done === c.total);
+    }
+    if(current && g.key === current.key){
+      document.getElementById('groupFill').style.width = c.pct + '%';
+      const gp = document.getElementById('groupPct');
+      gp.textContent = c.done + '/' + c.base + (c.cond ? ' + ' + c.cond + ' cond.' : '') + ' — ' + c.pct + '%';
+      gp.title = c.title;
+    }
   });
 }
 
@@ -835,7 +1042,7 @@ function renderAnalysis(){
       lastChapter = q.chapterNum;
       const sepTr = document.createElement('tr');
       sepTr.className = 'chapter-sep';
-      sepTr.innerHTML = `<td colspan="10">Chapitre ${q.chapterNum} — ${escapeHtml(q.chapterTitle)}</td>`;
+      sepTr.innerHTML = `<td colspan="10">Thématique ${q.chapterNum} — ${escapeHtml(displayTitle(q.chapterTitle))}</td>`;
       body.appendChild(sepTr);
     }
 
@@ -931,7 +1138,7 @@ function renderAnalysis(){
 
 function exportCsv(){
   const isExpert = currentRole === 'expert';
-  const headers = ['N°','Chapitre','Section','Question','Réf BPP','Réponse'];
+  const headers = ['N°','Thématique','Chapitre BPP','Section','Question','Réf BPP','Réponse'];
   if(isExpert) headers.push('Criticité','Risque maîtrisé','Action');
   headers.push('Commentaire','Preuve');
   const rows = [headers];
@@ -939,7 +1146,8 @@ function exportCsv(){
     const st = qState(q.id);
     const row = [
       q.code,
-      q.chapterNum + ' - ' + q.chapterTitle,
+      q.chapterNum + ' - ' + displayTitle(q.chapterTitle),
+      q.bppChap,
       q.sectionTitle,
       (q.depth>0?'↳ ':'') + q.question,
       (q.refs&&q.refs.length?q.refs:[q.ref||'']).join(', '),
@@ -1047,7 +1255,7 @@ function renderStats(){
     row.className = 'bar-row';
     const pct = s.pct;
     row.innerHTML = `
-      <div class="bname">${chapterNum} — ${escapeHtml(ch.title)}</div>
+      <div class="bname">${chapterNum} — ${escapeHtml(displayTitle(ch.title))}</div>
       <div class="btrack"><div class="bfill" style="width:${pct||0}%;background:${pct!==null?barColor(pct):'var(--border)'}"></div></div>
       <div class="bscore" style="color:${pct!==null?barColor(pct):'var(--text-light)'}">${pct!==null?pct+'%':'n/a'}</div>
     `;
