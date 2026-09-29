@@ -447,6 +447,17 @@
   .modal h3{margin:0 0 14px;font-size:16px;}
   .modal .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
   .cred-box{background:var(--bg-soft);border-radius:10px;padding:12px 14px;font-size:13px;white-space:pre-wrap;font-family:ui-monospace,Menlo,monospace;}
+
+  /* ===== Travail à plusieurs ===== */
+  .qmeta{font-size:11px;color:var(--text-light);margin-top:6px;text-align:right;}
+  .qcard.conflict{box-shadow:0 0 0 3px var(--orange);}
+  #toast{position:fixed;right:20px;bottom:20px;z-index:95;max-width:420px;background:var(--text);color:#fff;
+    border-radius:12px;padding:12px 16px;font-size:13px;box-shadow:var(--shadow-lg);display:none;}
+  #toast.show{display:block;}
+  #toast.warn{background:var(--orange);}
+  .mail-status{border-radius:10px;padding:10px 14px;font-size:13px;margin:0 0 12px;}
+  .mail-status.ok{background:var(--green-bg);color:var(--green);}
+  .mail-status.ko{background:var(--orange-bg);color:var(--orange);}
 </style>
 </head>
 <body>
@@ -678,6 +689,7 @@
   </form>
 </div>
 
+<div id="toast" role="status"></div>
 <div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
 
 <footer class="site">Outil d'auto-évaluation interne — SFPO · Données stockées dans PostgreSQL (API FastAPI)</footer>
@@ -821,7 +833,8 @@ function defaultQState(){
   return {
     reponse: null, comment_actif: false, commentaire: '', preuve_texte: '',
     preuve_fichier_nom: null, preuve_fichier_url: null,
-    criticite: null, risque_maitrise: null, action: ''
+    criticite: null, risque_maitrise: null, action: '',
+    version: 0, updated_at: null, updated_by_nom: null
   };
 }
 
@@ -835,7 +848,10 @@ async function apiFetch(path, options){
   if(!res.ok){
     let detail = res.statusText;
     try{ detail = (await res.json()).detail || detail; }catch(e){}
-    throw new Error(detail);
+    const err = new Error(typeof detail === 'string' ? detail : (detail.message || res.statusText));
+    err.status = res.status;
+    err.detail = detail;
+    throw err;
   }
   if(res.status === 204) return null;
   return res.json();
@@ -995,31 +1011,128 @@ function applyViewMode(){
 
 function qState(qid){ return state[qid]; }
 
-/* ======================= SAVE (debounced per question) ======================= */
+/* ======================= SAVE (debounced per question) =======================
+   Plusieurs membres d'un centre peuvent travailler en même temps : chaque enregistrement
+   indique la version de la réponse sur laquelle on travaillait. Si quelqu'un l'a modifiée
+   entre-temps, le serveur refuse (409) : on recharge sa version et on prévient l'utilisateur,
+   plutôt que d'écraser silencieusement son travail. Les envois d'une même question sont
+   enchaînés pour ne jamais se doubler. */
 const saveTimers = {};
+const saveChains = {};
+const inFlight = {};      // envois en cours par question
+const localWriteAt = {};  // dernier enregistrement confirmé par question (ms)
 function scheduleSave(qid){
   clearTimeout(saveTimers[qid]);
   setSaveIndicator('saving', 'Enregistrement...');
   const evalId = EVALUATION_ID;
+  saveTimers[qid] = setTimeout(()=>{
+    delete saveTimers[qid];
+    queueForQuestion(qid, ()=>persist(qid, evalId));
+  }, 400);
+}
+function queueForQuestion(qid, task){
+  inFlight[qid] = (inFlight[qid] || 0) + 1;
+  const run = (saveChains[qid] || Promise.resolve()).then(task, task);
+  saveChains[qid] = run.catch(()=>{}).then(()=>{ inFlight[qid]--; });
+  return run;
+}
+function hasPendingSave(qid){ return !!saveTimers[qid] || inFlight[qid] > 0; }
+
+function applyServerMeta(qid, res){
   const st = qState(qid);
-  saveTimers[qid] = setTimeout(()=>persist(qid, evalId, st), 400);
+  if(!st || !res) return;
+  st.version = res.version; st.updated_at = res.updated_at; st.updated_by_nom = res.updated_by_nom;
+  localWriteAt[qid] = Date.now();
+  const meta = document.querySelector(`#q-${CSS.escape(qid)} .qmeta`);
+  if(meta) meta.textContent = metaText(st);
+}
+function metaText(st){
+  if(!st.updated_by_nom || !st.updated_at) return '';
+  const d = new Date(st.updated_at);
+  return 'Modifié par ' + st.updated_by_nom + ' · ' +
+    d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
 }
 
-async function persist(qid, evalId, st){
+async function persist(qid, evalId){
+  if(evalId !== EVALUATION_ID) return; // questionnaire changé entre-temps
+  const st = qState(qid);
   const body = {
     reponse: st.reponse, comment_actif: st.comment_actif, commentaire: st.commentaire,
     preuve_texte: st.preuve_texte, criticite: st.criticite,
-    risque_maitrise: st.risque_maitrise, action: st.action
+    risque_maitrise: st.risque_maitrise, action: st.action,
+    base_version: st.version || 0,
   };
   try{
-    await apiFetch(`/evaluations/${evalId}/responses/${qid}`, {
+    const res = await apiFetch(`/evaluations/${evalId}/responses/${qid}`, {
       method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
     });
+    applyServerMeta(qid, res);
     setSaveIndicator('saved', 'Enregistré ' + new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}));
   }catch(err){
+    if(err.status === 409 && err.detail && err.detail.current){
+      replaceQuestionState(qid, err.detail.current);
+      const who = err.detail.current.updated_by_nom || 'une autre personne';
+      const code = (QUESTION_BY_ID[qid] || {}).code || qid;
+      showToast(`${code} a été modifiée entre-temps par ${who}. Sa version a été rechargée : vérifiez-la et refaites votre modification si besoin.`, 'warn');
+      const card = document.getElementById('q-' + qid);
+      if(card){ card.classList.add('conflict'); card.scrollIntoView({block:'center', behavior:'smooth'}); }
+      setSaveIndicator('error', 'Conflit sur ' + code + ' — version rechargée');
+      return;
+    }
     console.error(err);
     setSaveIndicator('error', "Erreur d'enregistrement — nouvelle tentative au prochain changement");
   }
+}
+
+/* Remplace l'état d'une question par la version serveur et redessine sa carte */
+function replaceQuestionState(qid, serverState){
+  state[qid] = Object.assign(defaultQState(), serverState || {});
+  const q = QUESTION_BY_ID[qid];
+  const old = document.getElementById('q-' + qid);
+  if(q && old) old.replaceWith(renderQuestionCard(q, q.depth));
+  refreshVisibility();
+  updateProgress();
+  const activeTab = document.querySelector('.tab-btn.active');
+  if(activeTab && activeTab.dataset.tab === 'analysis') renderAnalysis();
+}
+
+/* Actualisation périodique : récupère les réponses saisies par les autres membres du centre */
+async function refreshFromServer(){
+  if(!EVALUATION_ID || document.hidden) return;
+  const activeTab = document.querySelector('.tab-btn.active');
+  if(!activeTab || activeTab.dataset.tab === 'admin') return;
+  let responses;
+  const evalId = EVALUATION_ID;
+  const startedAt = Date.now();
+  const skip = qid => hasPendingSave(qid) || (localWriteAt[qid] || 0) >= startedAt;
+  try{ responses = await apiFetch(`/evaluations/${evalId}/responses`); }catch(e){ return; }
+  if(evalId !== EVALUATION_ID) return;
+  let changed = 0;
+  Object.keys(responses).forEach(qid=>{
+    const st = qState(qid);
+    if(!st || skip(qid) || (responses[qid].version || 0) <= (st.version || 0)) return;
+    const focused = document.activeElement && document.activeElement.closest && document.activeElement.closest('#q-' + CSS.escape(qid));
+    if(focused) return; // ne pas changer une question en cours de saisie
+    replaceQuestionState(qid, responses[qid]);
+    changed++;
+  });
+  // réponses effacées par un expert (réinitialisation)
+  ALL_QUESTIONS.forEach(q=>{
+    const st = qState(q.id);
+    if(st.version && !responses[q.id] && !skip(q.id)){ replaceQuestionState(q.id, null); changed++; }
+  });
+  if(changed) showToast(`${changed} réponse(s) mise(s) à jour par d'autres membres du centre.`);
+}
+setInterval(refreshFromServer, 45000);
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refreshFromServer(); });
+
+let toastTimer = null;
+function showToast(text, kind){
+  const t = document.getElementById('toast');
+  t.textContent = text;
+  t.className = 'show' + (kind ? ' ' + kind : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ t.className = ''; }, kind === 'warn' ? 9000 : 4500);
 }
 
 /* ======================= RENDER: QUESTIONNAIRE ======================= */
@@ -1213,7 +1326,9 @@ function renderQuestionCard(q, depth){
         <span class="upload-status"></span>
       </div>
     </div>
+    <div class="qmeta">${escapeHtml(metaText(st))}</div>
   `;
+  card.addEventListener('focusin', ()=>card.classList.remove('conflict'));
 
   if(st.reponse){ card.classList.add('answered'); card.dataset.reponse = st.reponse; }
   if(isReadOnly()){
@@ -1260,9 +1375,8 @@ function renderQuestionCard(q, depth){
     const fd = new FormData();
     fd.append('file', f);
     try{
-      const res = await fetch(`${API}/evaluations/${EVALUATION_ID}/responses/${q.id}/file`, {method:'POST', body: fd});
-      if(!res.ok) throw new Error((await res.json()).detail || 'Échec de l\'envoi');
-      const data = await res.json();
+      const data = await queueForQuestion(q.id, ()=>apiFetch(`/evaluations/${EVALUATION_ID}/responses/${q.id}/file`, {method:'POST', body: fd}));
+      applyServerMeta(q.id, data);
       st.preuve_fichier_nom = data.preuve_fichier_nom;
       st.preuve_fichier_url = data.preuve_fichier_url;
       fnameLink.textContent = data.preuve_fichier_nom;
@@ -1277,7 +1391,8 @@ function renderQuestionCard(q, depth){
 
   fileChip.querySelector('.rm').addEventListener('click', async ()=>{
     try{
-      await apiFetch(`/evaluations/${EVALUATION_ID}/responses/${q.id}/file`, {method:'DELETE'});
+      const data = await queueForQuestion(q.id, ()=>apiFetch(`/evaluations/${EVALUATION_ID}/responses/${q.id}/file`, {method:'DELETE'}));
+      if(data && data.version) applyServerMeta(q.id, data);
       st.preuve_fichier_nom = null; st.preuve_fichier_url = null;
       fileInput.value = '';
       fileChip.classList.remove('show');
@@ -1689,6 +1804,7 @@ document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
 
 /* ======================= TABLEAU DE BORD EXPERT ======================= */
 let adminSub = 'evals';
+let ADMIN_CONFIG = {smtp:false};
 let DASH = null;
 let USERS = [];
 
@@ -1705,8 +1821,12 @@ document.querySelectorAll('#adminSubtabs button').forEach(b=>{
   b.addEventListener('click', ()=>{ adminSub = b.dataset.sub; renderAdmin(); });
 });
 
+async function loadAdminConfig(){
+  try{ ADMIN_CONFIG = await apiFetch('/admin/config'); }catch(e){}
+}
 function renderAdmin(){
   if(!ME || ME.role !== 'expert') return;
+  if(!renderAdmin.configLoaded){ renderAdmin.configLoaded = true; loadAdminConfig(); }
   document.querySelectorAll('#adminSubtabs button').forEach(b=>b.classList.toggle('active', b.dataset.sub === adminSub));
   document.querySelectorAll('.admin-sub').forEach(el=>{ el.style.display = el.id === 'sub-' + adminSub ? 'block' : 'none'; });
   if(adminSub === 'evals') loadDashboard();
@@ -1842,6 +1962,7 @@ function userFormHtml(u){
 
 document.getElementById('btnNewUser').addEventListener('click', ()=>{
   openModal(`<h3>Nouveau compte</h3>${userFormHtml()}
+    ${sendMailCheckbox(true)}
     <p class="form-error" id="modalError"></p>
     <div class="modal-actions"><button class="btn ghost" data-close>Annuler</button><button class="btn primary" id="modalOk">Créer le compte</button></div>`);
   const picker = bindCentrePicker('uCentre');
@@ -1852,9 +1973,9 @@ document.getElementById('btnNewUser').addEventListener('click', ()=>{
       const res = await apiFetch('/admin/users', jsonOpts('POST', {
         login: document.getElementById('uLogin').value, role,
         nom: document.getElementById('uNom').value, email: document.getElementById('uEmail').value,
-        centre_id: picker.value(),
+        centre_id: picker.value(), send_email: sendMailChecked(),
       }));
-      showCredentials(res, document.getElementById('uNom').value, picker.label(), role, true);
+      showCredentials(res);
       loadUsers();
     }catch(err){ document.getElementById('modalError').textContent = err.message; }
   });
@@ -1879,31 +2000,50 @@ function editUser(u){
   });
 }
 
-async function resetUserPassword(u){
-  if(!confirm(`Générer un nouveau mot de passe provisoire pour ${u.login} ? L'ancien ne fonctionnera plus.`)) return;
-  try{ showCredentials(await apiFetch(`/admin/users/${u.id}/reset-password`, {method:'POST'}), u.nom, u.centre_libelle, u.role, false); loadUsers(); }
-  catch(err){ alert(err.message); }
+function resetUserPassword(u){
+  openModal(`<h3>Nouveau mot de passe pour ${escapeHtml(u.login)}</h3>
+    <p class="form-note">Un mot de passe provisoire va être généré ; l'ancien ne fonctionnera plus et la personne devra en choisir un nouveau à sa prochaine connexion.</p>
+    ${sendMailCheckbox(!!u.email, u.email)}
+    <p class="form-error" id="modalError"></p>
+    <div class="modal-actions"><button class="btn ghost" data-close>Annuler</button><button class="btn primary" id="modalOk">Générer</button></div>`);
+  document.getElementById('modalOk').addEventListener('click', async ()=>{
+    try{
+      showCredentials(await apiFetch(`/admin/users/${u.id}/reset-password`, jsonOpts('POST', {send_email: sendMailChecked()})));
+      loadUsers();
+    }catch(err){ document.getElementById('modalError').textContent = err.message; }
+  });
 }
 
-/* Affiche les identifiants à transmettre (une seule fois : le mot de passe n'est pas stocké en clair) */
-function showCredentials(res, nom, centre, role, isNew){
-  const isExpert = role === 'expert';
-  const acces = isExpert ? 'accès Expert / administrateur' : 'accès Membre';
-  const perimetre = isExpert
-    ? `Cet accès Expert / administrateur vous permet de consulter et d'expertiser les questionnaires de tous les centres, et de gérer les centres et les comptes utilisateurs.`
-    : `Cet accès Membre vous permet de remplir le questionnaire d'auto-évaluation de votre centre${centre ? ' (' + centre + ')' : ''}.`;
-  const text = `Bonjour${nom ? ' ' + nom : ''},\n\n` +
-    (isNew ? `Un ${acces} à l'outil d'auto-évaluation BPP de la SFPO a été créé pour vous.\n${perimetre}\n\n`
-           : `Le mot de passe de votre ${acces} à l'outil d'auto-évaluation BPP de la SFPO a été réinitialisé.\n\n`) +
-    `Adresse : ${location.origin}\nType d'accès : ${isExpert ? 'Expert / administrateur' : 'Membre'}\n` +
-    `Identifiant : ${res.login}\nMot de passe provisoire : ${res.password}\n\n` +
-    `Vous devrez choisir un mot de passe personnel à la première connexion.`;
-  openModal(`<h3>Identifiants à transmettre — ${isExpert ? 'accès Expert / administrateur' : 'accès Membre'}</h3>
-    <p class="form-note">Copiez ce message maintenant : le mot de passe provisoire ne sera plus affiché ensuite.</p>
-    <div class="cred-box" id="credText">${escapeHtml(text)}</div>
+/* Case « envoyer par e-mail » (active seulement si l'envoi SMTP est configuré sur le serveur) */
+function sendMailCheckbox(checked, email){
+  if(!ADMIN_CONFIG.smtp){
+    return '<p class="form-note">Envoi automatique par e-mail non configuré sur le serveur : le message sera à copier et à envoyer vous-même.</p>';
+  }
+  return `<label class="check-label"><input type="checkbox" id="sendMail" ${checked ? 'checked' : ''}>
+    Envoyer les identifiants par e-mail${email ? ' à ' + escapeHtml(email) : ' (adresse ci-dessus)'}</label>`;
+}
+function sendMailChecked(){
+  const c = document.getElementById('sendMail');
+  return !!(c && c.checked);
+}
+
+/* Affiche les identifiants (une seule fois : le mot de passe n'est pas stocké en clair).
+   Le texte est construit par le serveur, identique à celui envoyé par e-mail. */
+function showCredentials(res){
+  const isExpert = res.role === 'expert';
+  let mailStatus = '';
+  if(res.email_sent){
+    mailStatus = `<div class="mail-status ok">✓ Identifiants envoyés par e-mail à ${escapeHtml(res.email)}.</div>`;
+  }else if(res.email_error){
+    mailStatus = `<div class="mail-status ko">E-mail non envoyé : ${escapeHtml(res.email_error)}.<br>Copiez le message ci-dessous et envoyez-le vous-même.</div>`;
+  }
+  openModal(`<h3>Identifiants — ${isExpert ? 'accès Expert / administrateur' : 'accès Membre'}</h3>
+    ${mailStatus}
+    <p class="form-note">${res.email_sent ? 'Copie du message envoyé' : 'Copiez ce message maintenant'} : le mot de passe provisoire ne sera plus affiché ensuite.</p>
+    <div class="cred-box" id="credText">${escapeHtml(res.message)}</div>
     <div class="modal-actions"><button class="btn ghost" id="btnCopyCred">Copier</button><button class="btn primary" data-close>Fermer</button></div>`);
   document.getElementById('btnCopyCred').addEventListener('click', async (e)=>{
-    try{ await navigator.clipboard.writeText(text); e.target.textContent = 'Copié ✓'; }
+    try{ await navigator.clipboard.writeText(res.message); e.target.textContent = 'Copié ✓'; }
     catch(err){ e.target.textContent = 'Copie impossible : sélectionnez le texte'; }
   });
 }

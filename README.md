@@ -23,6 +23,7 @@ Un seul conteneur CapRover sert à la fois :
 app/main.py         API FastAPI (questionnaire, réponses, upload de preuves)
 app/auth.py         Authentification provisoire (login/mot de passe, sessions) — à remplacer par le SSO SFPO
 app/admin.py        Espace expert (tableau de bord, centres, comptes)
+app/mailer.py       Envoi des identifiants par e-mail (SMTP, optionnel)
 app/db.py           Connexion PostgreSQL (pool psycopg2)
 static/index.html    Page web (Auto-évaluation / Analyse & Expertise / Statistiques)
 static/assets/       Logo SFPO
@@ -80,6 +81,15 @@ Dans l'app créée :
   - `ADMIN_PASSWORD` = son mot de passe initial. Utilisé **uniquement** si aucun compte n'existe
     encore ; le changement est imposé à la première connexion. S'il est absent, un mot de passe
     provisoire aléatoire est généré et affiché dans les logs de l'app.
+  - **Envoi des identifiants par e-mail (optionnel)** — sans `SMTP_HOST`, l'expert copie
+    le message et l'envoie lui-même :
+    - `SMTP_HOST` (ex. `smtp.office365.com`, `ssl0.ovh.net`, `smtp-relay.brevo.com`)
+    - `SMTP_PORT` (défaut `587`, ou `465` en SSL)
+    - `SMTP_SECURITY` = `starttls` (défaut) | `ssl` | `none`
+    - `SMTP_USER` / `SMTP_PASSWORD` : compte d'envoi
+    - `SMTP_FROM` : adresse d'expédition (défaut : `SMTP_USER`)
+    - `APP_URL` : adresse publique de l'outil citée dans les e-mails (défaut : déduite
+      de la requête, ex. `https://bpp.sfpo.com`)
   - (`UPLOAD_DIR` est déjà fixé à `/app/uploads` dans le Dockerfile, inutile de le redéfinir sauf besoin spécifique)
 
 - **App Configs → Persistent Directories** (important — sans ça, les preuves
@@ -157,9 +167,10 @@ de passe :
   - suit tous les questionnaires (centre, statut en cours / terminé,
     progression, non-conformités restant à qualifier, dernière activité) ;
   - crée les comptes **membres** (et d'autres experts) et les rattache à un
-    centre. Un mot de passe provisoire est généré et affiché une seule fois,
-    avec un message prêt à copier pour l'envoyer ; la personne choisit son mot
-    de passe à la première connexion. Un expert peut aussi régénérer un mot de
+    centre. Un mot de passe provisoire est généré ; le message d'identifiants
+    (type d'accès, adresse, identifiant, mot de passe provisoire) est envoyé par
+    e-mail si le SMTP est configuré, et affiché une seule fois pour copie dans
+    tous les cas. La personne choisit son mot de passe à la première connexion. Un expert peut aussi régénérer un mot de
     passe ou désactiver un compte ;
   - gère le référentiel des **centres** (≈1 300 établissements importés depuis
     l'export SFPO, identifiants conservés) : recherche, ajout, modification ;
@@ -172,6 +183,14 @@ de passe :
   comme terminé une fois rempli, après quoi il ne peut plus le modifier.
   Criticité, risque maîtrisé et action corrective restent réservés aux experts
   (contrôlé côté serveur).
+
+**Plusieurs membres sur un même questionnaire** : chaque réponse porte un
+numéro de version et le nom de la dernière personne qui l'a modifiée (affiché
+sous la question). Si deux personnes modifient la même question, la seconde
+n'écrase pas la première : sa modification est refusée, la version enregistrée
+est rechargée et un message l'invite à vérifier puis refaire sa saisie. Les
+réponses saisies par les collègues apparaissent automatiquement (actualisation
+toutes les 45 s et au retour sur l'onglet).
 
 Le questionnaire qui existait avant cette évolution apparaît dans le tableau de
 bord comme « Sans centre (historique) » : bouton *Rattacher* pour l'affecter à
@@ -209,7 +228,8 @@ mémorisés dans le navigateur.
 - `evaluations` — une campagne d'auto-évaluation par centre (plusieurs
   possibles dans le temps), avec son statut (`en_cours` / `termine`).
 - `responses` — une ligne par question répondue (réponse, commentaire, preuve,
-  criticité, risque maîtrisé, action corrective). Les questions masquées par une
+  criticité, risque maîtrisé, action corrective), avec `version` et
+  `updated_by` (dernier auteur). Les questions masquées par une
   dépendance non remplie ne comptent pas dans la progression ni les statistiques.
 
 ## Sécurité
