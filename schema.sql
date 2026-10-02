@@ -23,6 +23,9 @@ CREATE TABLE IF NOT EXISTS questions (
   -- n'est affichée que si la question référencée a la réponse indiquée (ex: depends_on_question_id='Q001', depends_on_value='oui')
   depends_on_question_id  TEXT REFERENCES questions(id) ON DELETE CASCADE,
   depends_on_value        TEXT,
+  -- ligne « PART 1 » de l'Excel : partie initiale commune à plusieurs questions, sans réponse
+  -- (renseignée par migrations/007_questions_part.sql)
+  is_part                 BOOLEAN NOT NULL DEFAULT FALSE,
   sort_order              INT  NOT NULL
 );
 

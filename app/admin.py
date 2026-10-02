@@ -23,7 +23,8 @@ def config():
 # Tableau de bord
 # ------------------------------------------------------------------
 # Questions « de base » : ni elles ni leurs questions chapeau n'ont de condition d'affichage
-# (même définition que le compteur de progression de l'interface).
+# (même définition que le compteur de progression de l'interface). Les lignes « PART »
+# (partie initiale commune, sans réponse) ne sont pas des questions et sont exclues.
 BASE_QUESTIONS_SQL = """
 WITH RECURSIVE anc AS (
   SELECT id, depends_on_question_id AS dep, parent_question_id AS parent FROM questions
@@ -31,7 +32,8 @@ WITH RECURSIVE anc AS (
   SELECT anc.id, q.depends_on_question_id, q.parent_question_id
   FROM anc JOIN questions q ON q.id = anc.parent
 )
-SELECT COUNT(*) AS n FROM questions WHERE id NOT IN (SELECT id FROM anc WHERE dep IS NOT NULL)
+SELECT COUNT(*) AS n FROM questions
+WHERE NOT is_part AND id NOT IN (SELECT id FROM anc WHERE dep IS NOT NULL)
 """
 
 
@@ -41,14 +43,15 @@ def dashboard():
     rows = fetch_all(
         """
         SELECT e.id, e.label, e.status, e.created_at, e.completed_at, e.centre_id, c.libelle AS centre_libelle,
-               COUNT(r.question_id) FILTER (WHERE r.reponse IS NOT NULL)            AS answered,
-               COUNT(r.question_id) FILTER (WHERE r.reponse = 'non')                AS non_conformes,
-               COUNT(r.question_id) FILTER (WHERE r.reponse = 'non' AND r.criticite IS NULL) AS a_qualifier,
+               COUNT(r.question_id) FILTER (WHERE r.reponse IS NOT NULL AND NOT q.is_part) AS answered,
+               COUNT(r.question_id) FILTER (WHERE r.reponse = 'non' AND NOT q.is_part) AS non_conformes,
+               COUNT(r.question_id) FILTER (WHERE r.reponse = 'non' AND r.criticite IS NULL AND NOT q.is_part) AS a_qualifier,
                MAX(r.updated_at) AS last_activity,
                (SELECT COUNT(*) FROM users u WHERE u.centre_id = e.centre_id AND u.role = 'membre' AND u.active) AS membres
         FROM evaluations e
         LEFT JOIN centres c ON c.id = e.centre_id
         LEFT JOIN responses r ON r.evaluation_id = e.id
+        LEFT JOIN questions q ON q.id = r.question_id
         GROUP BY e.id, c.libelle
         ORDER BY e.status, COALESCE(MAX(r.updated_at), e.created_at) DESC
         """
