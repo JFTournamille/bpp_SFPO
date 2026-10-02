@@ -221,25 +221,29 @@
   .qpart .qid-badge{background:var(--gray);}
   .qpart .qtext{font-weight:600;}
   .qpart-ellipsis{color:var(--text-light);}
-  .qpart-note{font-size:11.5px;color:var(--text-light);margin-top:6px;font-style:italic;}
   .qid-badge{
     flex:none;font-size:12px;font-weight:700;color:#fff;background:var(--blue);
     padding:3px 9px;border-radius:var(--radius-pill);margin-top:1px;
   }
-  .qtext{flex:1;font-size:14.5px;color:var(--text);}
+  .qtext{font-size:14.5px;color:var(--text);}
+  /* texte de la question sur toute la largeur, références BPP en dessous */
+  .qmain{flex:1;min-width:0;}
 
-  .ref-badges{flex:none;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;}
+  .ref-badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+  .ref-badges:empty{display:none;}
 
   .ref-badge{
     flex:none;position:relative;display:inline-flex;align-items:center;
-    font-size:11px;font-weight:700;color:#fff;background:var(--blue);
-    padding:3px 10px;border-radius:var(--radius-pill);
+    font-size:11px;font-weight:600;color:var(--blue-dark);background:#dde8f5;
+    border:1px solid #b9cee6;
+    padding:2px 9px;border-radius:var(--radius-pill);
     cursor:help;white-space:nowrap;margin-top:1px;user-select:none;
   }
-  .ref-badge:hover, .ref-badge.open{background:var(--blue-dark);}
+  /* références BPP en style clair : à ne pas confondre avec le numéro de question (bleu plein) */
+  .ref-badge:hover, .ref-badge.open{background:#c9dbf0;border-color:#9dbbe0;}
   .ref-badge .ref-tooltip{
     display:none;position:absolute;z-index:50;
-    top:24px;right:0;
+    top:24px;left:0;
     width:300px;max-width:70vw;
     background:#2b2b2b;color:#fff;font-weight:400;
     font-size:12.5px;line-height:1.5;text-align:left;white-space:normal;
@@ -831,11 +835,11 @@ function buildAllQuestions(){
   ALL_QUESTIONS.forEach(q=>{ q.isBase = isBaseQuestion(q); });
 }
 
-/* Une question conditionnelle est affichée par défaut, y compris tant que la question
-   dont elle dépend n'a pas de réponse ; elle n'est masquée que lorsque cette réponse
-   contredit la condition (ex. condition « oui » : masquée si « non » ou « NA »,
-   « partiellement conforme » la laisse affichée). Sa question de dépendance et sa
-   question chapeau (le cas échéant) doivent elles-mêmes être visibles. */
+/* Une question conditionnelle n'est affichée que si la question dont elle dépend a reçu
+   la réponse attendue (condition « oui » : « oui » ou « partiellement conforme ») ; elle
+   est masquée tant que cette question est sans réponse, ou si la réponse est « non » / « NA ».
+   Sa question de dépendance et sa question chapeau (le cas échéant) doivent elles-mêmes
+   être visibles. */
 function dependencyMet(reponse, expected){
   return reponse === expected || (expected === 'oui' && reponse === 'partiel');
 }
@@ -848,8 +852,7 @@ function isVisible(q, seen){
     const dep = QUESTION_BY_ID[q.dependsOnQuestionId];
     if(dep){
       // une ligne « PART » n'a pas de réponse : la dépendance porte seulement sur son affichage
-      const r = dep.isPart ? null : (qState(dep.id) || {}).reponse;
-      if(r && !dependencyMet(r, q.dependsOnValue)) return false;
+      if(!dep.isPart && !dependencyMet((qState(dep.id) || {}).reponse, q.dependsOnValue)) return false;
       if(!isVisible(dep, seen)) return false;
     }
   }
@@ -1400,13 +1403,14 @@ function renderPartCard(q, depth){
   card.innerHTML = `
     <div class="qcard-top">
       <span class="qid-badge">${escapeHtml(q.code)}</span>
-      <div class="qtext">${depth>0?'<span class="sub-arrow">&#8627;</span>':''}${escapeHtml(q.question)} <span class="qpart-ellipsis">…</span></div>
-      <span class="ref-badges">${refs.map(r=>`
-        <span class="ref-badge" tabindex="0">BPP ${escapeHtml(r)}
-          <span class="ref-tooltip">${escapeHtml(q.refText)}</span>
-        </span>`).join('')}</span>
+      <div class="qmain">
+        <div class="qtext">${depth>0?'<span class="sub-arrow">&#8627;</span>':''}${escapeHtml(q.question)} <span class="qpart-ellipsis">…</span></div>
+        <span class="ref-badges">${refs.map(r=>`
+          <span class="ref-badge" tabindex="0">BPP ${escapeHtml(r)}
+            <span class="ref-tooltip">${escapeHtml(q.refText)}</span>
+          </span>`).join('')}</span>
+      </div>
     </div>
-    <div class="qpart-note">Partie commune aux questions suivantes — pas de réponse attendue</div>
   `;
   return card;
 }
@@ -1429,8 +1433,10 @@ function renderQuestionCard(q, depth){
   card.innerHTML = `
     <div class="qcard-top">
       <span class="qid-badge">${escapeHtml(q.code)}</span>
-      <div class="qtext">${depth>0?'<span class="sub-arrow">&#8627;</span>':''}${escapeHtml(q.question)}</div>
-      <span class="ref-badges">${refBadges}</span>
+      <div class="qmain">
+        <div class="qtext">${depth>0?'<span class="sub-arrow">&#8627;</span>':''}${escapeHtml(q.question)}</div>
+        <span class="ref-badges">${refBadges}</span>
+      </div>
     </div>
     <div class="answers">
       ${['oui','non','partiel','na'].map(v=>`
