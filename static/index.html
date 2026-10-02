@@ -20,6 +20,7 @@
     --bg-soft:#eef1f4;
     --bg-soft-2:#e3e8ee;
     --q-bg:#e8ecf1;
+    --page-bg:#d9dfe7;
     --border:#c7cfd8;
     --green:#256029;
     --green-bg:#dcf0de;
@@ -39,7 +40,7 @@
   body{
     font-family:'Raleway', sans-serif;
     color:var(--text);
-    background:var(--bg-soft);
+    background:var(--page-bg);
     line-height:1.5;
     -webkit-font-smoothing:antialiased;
   }
@@ -108,7 +109,12 @@
   nav.tabs button.active{color:var(--blue-dark);border-bottom-color:var(--blue);font-weight:600;}
 
   /* ===== Progress bar ===== */
-  .progress-panel{background:#fff;border-bottom:1px solid var(--border);}
+  /* reste visible sous l'en-tête pendant le défilement */
+  .progress-panel{
+    background:#fff;border-bottom:1px solid var(--border);
+    position:sticky;top:var(--header-h,73px);z-index:35;
+    box-shadow:0 2px 8px rgba(15,25,40,.06);
+  }
   .progress-panel .wrap{padding:14px 20px 16px;}
   .progress-row{display:flex;align-items:center;gap:14px;margin-bottom:8px;}
   .progress-row .label{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;}
@@ -1347,9 +1353,18 @@ function setAuditMode(mode){
 }
 document.querySelectorAll('.mode-btn').forEach(b=>b.addEventListener('click', ()=>setAuditMode(b.dataset.mode)));
 
-/* Décalage sous l'en-tête collant, pour le menu latéral et l'ancrage des cartes */
-function stickyTop(){ return document.querySelector('header.site').offsetHeight + 16; }
-function updateStickyTop(){ document.documentElement.style.setProperty('--sticky-top', stickyTop() + 'px'); }
+/* Décalage sous l'en-tête et la barre de progression collants, pour le menu latéral
+   et l'ancrage des cartes */
+function headerHeight(){ return document.querySelector('header.site').offsetHeight; }
+function stickyTop(){
+  const panel = document.getElementById('progressPanel');
+  const panelH = panel && panel.style.display !== 'none' ? panel.offsetHeight : 0;
+  return headerHeight() + panelH + 16;
+}
+function updateStickyTop(){
+  document.documentElement.style.setProperty('--header-h', headerHeight() + 'px');
+  document.documentElement.style.setProperty('--sticky-top', stickyTop() + 'px');
+}
 window.addEventListener('resize', updateStickyTop);
 updateStickyTop();
 
@@ -1887,6 +1902,7 @@ function switchTab(name){
   document.querySelectorAll('.tab-panel').forEach(p=>p.style.display='none');
   document.getElementById('tab-'+name).style.display='block';
   document.getElementById('progressPanel').style.display = (name==='questionnaire') ? 'block' : 'none';
+  updateStickyTop();
   if(name==='analysis') renderAnalysis();
   if(name==='stats') renderStats();
 }
