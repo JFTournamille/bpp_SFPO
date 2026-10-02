@@ -263,6 +263,11 @@ mémorisés dans le navigateur.
   contraire (« non » ou « NA » pour une condition « oui » ; « partiel » la laisse
   affichée). Les questions masquées ne comptent pas dans la progression ni les
   statistiques.
+- `questions.is_part` — lignes « PART 1 » du fichier Excel : partie initiale
+  commune à plusieurs questions (ex. Q042 « Le système documentaire mis en place
+  … est », complétée par Q042.01, Q042.02…). Affichées comme intitulé, sans
+  réponse, hors progression, analyse, exports et tableau de bord expert
+  (`migrations/007_questions_part.sql`).
 
 ## Sécurité
 

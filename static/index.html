@@ -212,6 +212,16 @@
   .qcard[data-reponse="na"]{border-left:4px solid var(--gray);}
 
   .qcard-top{display:flex;gap:10px;align-items:flex-start;}
+
+  /* ligne « PART » : partie initiale commune à plusieurs questions, sans réponse */
+  .qpart{
+    background:var(--bg-soft-2);border:1px dashed var(--border);border-radius:var(--radius);
+    padding:12px 18px;margin-bottom:12px;scroll-margin-top:var(--sticky-top,90px);
+  }
+  .qpart .qid-badge{background:var(--gray);}
+  .qpart .qtext{font-weight:600;}
+  .qpart-ellipsis{color:var(--text-light);}
+  .qpart-note{font-size:11.5px;color:var(--text-light);margin-top:6px;font-style:italic;}
   .qid-badge{
     flex:none;font-size:12px;font-weight:700;color:#fff;background:var(--blue);
     padding:3px 9px;border-radius:var(--radius-pill);margin-top:1px;
@@ -801,6 +811,9 @@ function flattenQuestions(q, section, chapterNum, chapterTitle, sub, depth, out,
     depth, bppChap,
     parentQuestionId: parentId || null, // l'API imbrique les sous-questions sans renvoyer ce lien
   });
+  // question qui complète une ligne « PART » : on garde l'amorce pour les vues à plat (analyse, export)
+  const parentFlat = parentId ? QUESTION_BY_ID[parentId] : null;
+  flat.partStem = (parentFlat && parentFlat.isPart) ? parentFlat.question : null;
   delete flat.children;
   out.push(flat);
   QUESTION_BY_ID[flat.id] = flat;
@@ -834,7 +847,8 @@ function isVisible(q, seen){
   if(q.dependsOnQuestionId && q.dependsOnQuestionId !== q.id){
     const dep = QUESTION_BY_ID[q.dependsOnQuestionId];
     if(dep){
-      const r = (qState(dep.id) || {}).reponse;
+      // une ligne « PART » n'a pas de réponse : la dépendance porte seulement sur son affichage
+      const r = dep.isPart ? null : (qState(dep.id) || {}).reponse;
       if(r && !dependencyMet(r, q.dependsOnValue)) return false;
       if(!isVisible(dep, seen)) return false;
     }
@@ -845,7 +859,10 @@ function isVisible(q, seen){
   }
   return true;
 }
-function visibleQuestions(){ return ALL_QUESTIONS.filter(q=>isVisible(q)); }
+/* Questions affichées et à renseigner : les lignes « PART » (partie initiale commune à
+   plusieurs questions, sans réponse) sont exclues de la progression, de l'analyse et des exports. */
+function visibleQuestions(){ return ALL_QUESTIONS.filter(q=>!q.isPart && isVisible(q)); }
+function fullQuestionText(q){ return q.partStem ? q.partStem + ' ' + q.question : q.question; }
 
 /* Question « de base » : affichée sur un questionnaire vierge, c.-à-d. sans
    condition d'affichage, ni pour elle ni pour ses questions chapeau. */
@@ -1374,7 +1391,28 @@ function refreshVisibility(){
   });
 }
 
+function renderPartCard(q, depth){
+  const card = document.createElement('div');
+  card.className = 'qpart' + (depth>0 ? ' sub' : '');
+  card.id = 'q-' + q.id;
+  card.dataset.qid = q.id;
+  const refs = (q.refs && q.refs.length) ? q.refs : (q.ref ? [q.ref] : []);
+  card.innerHTML = `
+    <div class="qcard-top">
+      <span class="qid-badge">${escapeHtml(q.code)}</span>
+      <div class="qtext">${depth>0?'<span class="sub-arrow">&#8627;</span>':''}${escapeHtml(q.question)} <span class="qpart-ellipsis">…</span></div>
+      <span class="ref-badges">${refs.map(r=>`
+        <span class="ref-badge" tabindex="0">BPP ${escapeHtml(r)}
+          <span class="ref-tooltip">${escapeHtml(q.refText)}</span>
+        </span>`).join('')}</span>
+    </div>
+    <div class="qpart-note">Partie commune aux questions suivantes — pas de réponse attendue</div>
+  `;
+  return card;
+}
+
 function renderQuestionCard(q, depth){
+  if(q.isPart) return renderPartCard(q, depth);
   const st = qState(q.id);
   const card = document.createElement('div');
   card.className = 'qcard' + (depth>0 ? ' sub' : '');
@@ -1617,7 +1655,7 @@ function renderAnalysis(){
     tr.innerHTML = `
       <td><strong>${escapeHtml(q.code)}</strong></td>
       <td>${escapeHtml(q.sectionTitle)}</td>
-      <td class="qtext-cell">${q.depth>0?'&#8627; ':''}${escapeHtml(q.question)}</td>
+      <td class="qtext-cell">${q.depth>0?'&#8627; ':''}${q.partStem?'<span class="muted">'+escapeHtml(q.partStem)+'</span> ':''}${escapeHtml(q.question)}</td>
       <td>${escapeHtml((q.refs&&q.refs.length?q.refs:[q.ref||'']).join(', '))}</td>
       <td><span class="pill ${pillClass}">${pillLabel}</span></td>
       <td>${critCell}</td>
@@ -1662,7 +1700,7 @@ function exportCsv(){
       q.chapterNum + ' - ' + displayTitle(q.chapterTitle),
       q.bppChap,
       q.sectionTitle,
-      (q.depth>0?'↳ ':'') + q.question,
+      (q.depth>0?'↳ ':'') + fullQuestionText(q),
       (q.refs&&q.refs.length?q.refs:[q.ref||'']).join(', '),
       st.reponse ? RESPONSE_LABELS[st.reponse] : '',
     ];

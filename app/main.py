@@ -42,7 +42,8 @@ def get_questionnaire(user: dict = Depends(current_user)):
     questions = fetch_all(
         "SELECT id, code, section_id, parent_question_id AS \"parentQuestionId\", question, "
         "ref, ref_text AS \"refText\", refs, "
-        "depends_on_question_id AS \"dependsOnQuestionId\", depends_on_value AS \"dependsOnValue\" "
+        "depends_on_question_id AS \"dependsOnQuestionId\", depends_on_value AS \"dependsOnValue\", "
+        "is_part AS \"isPart\" "
         "FROM questions ORDER BY sort_order"
     )
 
