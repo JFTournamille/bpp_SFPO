@@ -258,8 +258,11 @@ mémorisés dans le navigateur.
   possibles dans le temps), avec son statut (`en_cours` / `termine`).
 - `responses` — une ligne par question répondue (réponse, commentaire, preuve,
   criticité, risque maîtrisé, action corrective), avec `version` et
-  `updated_by` (dernier auteur). Les questions masquées par une
-  dépendance non remplie ne comptent pas dans la progression ni les statistiques.
+  `updated_by` (dernier auteur). Une question conditionnelle est affichée par
+  défaut et n'est masquée que si la question dont elle dépend reçoit une réponse
+  contraire (« non » ou « NA » pour une condition « oui » ; « partiel » la laisse
+  affichée). Les questions masquées ne comptent pas dans la progression ni les
+  statistiques.
 
 ## Sécurité
 
