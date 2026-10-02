@@ -19,6 +19,7 @@
     --bg:#ffffff;
     --bg-soft:#eef1f4;
     --bg-soft-2:#e3e8ee;
+    --q-bg:#dce3eb;
     --border:#c7cfd8;
     --green:#256029;
     --green-bg:#dcf0de;
@@ -198,7 +199,7 @@
   .sub-arrow{color:var(--text-light);margin-right:4px;}
 
   .qcard{
-    background:#fff;border:1px solid var(--border);border-radius:var(--radius);
+    background:var(--q-bg);border:1px solid var(--border);border-radius:var(--radius);
     padding:16px 18px;margin-bottom:12px;
     box-shadow:var(--shadow);
     transition:border-color .15s;
@@ -241,7 +242,7 @@
     flex:1;min-width:110px;text-align:center;
     font-size:12.5px;font-weight:600;
     padding:9px 8px;border-radius:var(--radius-pill);
-    border:1.5px solid var(--border);color:var(--text-light);
+    border:1.5px solid var(--border);color:var(--text-light);background:#fff;
     cursor:pointer;transition:all .12s;
   }
   .answers input{display:none;}
@@ -817,22 +818,34 @@ function buildAllQuestions(){
   ALL_QUESTIONS.forEach(q=>{ q.isBase = isBaseQuestion(q); });
 }
 
-/* Une question n'est visible que si sa condition de dépendance est remplie
-   (réponse attendue sur la question référencée) et que sa question chapeau
-   (le cas échéant) est elle-même visible. */
-function isVisible(q){
-  if(q.dependsOnQuestionId){
+/* Une question conditionnelle est affichée par défaut, y compris tant que la question
+   dont elle dépend n'a pas de réponse ; elle n'est masquée que lorsque cette réponse
+   contredit la condition (ex. condition « oui » : masquée si « non » ou « NA »,
+   « partiellement conforme » la laisse affichée). Sa question de dépendance et sa
+   question chapeau (le cas échéant) doivent elles-mêmes être visibles. */
+function dependencyMet(reponse, expected){
+  return reponse === expected || (expected === 'oui' && reponse === 'partiel');
+}
+function isVisible(q, seen){
+  // garde-fou contre les dépendances circulaires du référentiel (ex. Q211 dépend d'elle-même)
+  seen = seen || new Set();
+  if(seen.has(q.id)) return true;
+  seen.add(q.id);
+  if(q.dependsOnQuestionId && q.dependsOnQuestionId !== q.id){
     const dep = QUESTION_BY_ID[q.dependsOnQuestionId];
-    const depSt = dep ? qState(dep.id) : null;
-    if(!depSt || depSt.reponse !== q.dependsOnValue) return false;
+    if(dep){
+      const r = (qState(dep.id) || {}).reponse;
+      if(r && !dependencyMet(r, q.dependsOnValue)) return false;
+      if(!isVisible(dep, seen)) return false;
+    }
   }
   if(q.parentQuestionId){
     const parent = QUESTION_BY_ID[q.parentQuestionId];
-    if(parent && !isVisible(parent)) return false;
+    if(parent && !isVisible(parent, seen)) return false;
   }
   return true;
 }
-function visibleQuestions(){ return ALL_QUESTIONS.filter(isVisible); }
+function visibleQuestions(){ return ALL_QUESTIONS.filter(q=>isVisible(q)); }
 
 /* Question « de base » : affichée sur un questionnaire vierge, c.-à-d. sans
    condition d'affichage, ni pour elle ni pour ses questions chapeau. */
