@@ -258,10 +258,10 @@ mémorisés dans le navigateur.
   possibles dans le temps), avec son statut (`en_cours` / `termine`).
 - `responses` — une ligne par question répondue (réponse, commentaire, preuve,
   criticité, risque maîtrisé, action corrective), avec `version` et
-  `updated_by` (dernier auteur). Une question conditionnelle est affichée par
-  défaut et n'est masquée que si la question dont elle dépend reçoit une réponse
-  contraire (« non » ou « NA » pour une condition « oui » ; « partiel » la laisse
-  affichée). Les questions masquées ne comptent pas dans la progression ni les
+  `updated_by` (dernier auteur). Une question conditionnelle n'est affichée
+  que si la question dont elle dépend a reçu la réponse attendue (« oui » ou
+  « partiel » pour une condition « oui ») : elle est masquée tant que cette
+  question est sans réponse, ou si la réponse est « non » / « NA ». Les questions masquées ne comptent pas dans la progression ni les
   statistiques.
 - `questions.is_part` — lignes « PART 1 » du fichier Excel : partie initiale
   commune à plusieurs questions (ex. Q042 « Le système documentaire mis en place
