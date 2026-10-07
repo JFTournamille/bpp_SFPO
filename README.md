@@ -156,6 +156,32 @@ CapRover et la migration est retentée au démarrage suivant.
 Pour ajouter une évolution : créer `migrations/002_xxx.sql` (idéalement
 idempotent), puis redéployer.
 
+## Référentiel (questions BPP)
+
+Le questionnaire est décrit dans un **fichier maître Excel** versionné dans le dépôt :
+`referentiel/referentiel_BPP_SFPO.xlsx`. C'est ce fichier qu'on modifie pour faire évoluer
+les questions — jamais la base directement.
+
+- Feuille **Référentiel** : une ligne par titre ou question, dans l'ordre d'affichage
+  (type, niveau de titre, code, question chapeau, condition d'affichage, intitulé, réf. BPP).
+  La colonne *Contrôle* doit afficher « OK » sur chaque question.
+- Feuille **Références BPP** : texte officiel de chaque référence (info-bulles).
+- Feuille **Journal** : historique des modifications.
+- Feuille **Mode d'emploi** : règles de saisie, version du référentiel.
+
+Mettre à jour l'outil après modification du fichier :
+
+```bash
+pip install openpyxl
+python tools/referentiel.py referentiel/referentiel_BPP_SFPO.xlsx > migrations/0NN_referentiel_<version>.sql
+```
+
+Le script contrôle le fichier (codes uniques, chapeaux et conditions existants, références
+documentées) puis génère une migration qui remplace sections et questions. Les réponses déjà
+saisies suivent leur question grâce à la colonne *Ancien code* (renumérotation, fusion) ; la
+migration refuse de s'appliquer si la base n'est pas dans la version indiquée par « « Ancien
+code » se rapporte à la version » (protection contre une double renumérotation).
+
 ## Comptes, centres et questionnaires
 
 En attendant le branchement du SSO SFPO, l'accès se fait par identifiant / mot
