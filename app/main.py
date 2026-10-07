@@ -36,6 +36,23 @@ except Exception:  # base injoignable au démarrage : l'API répondra en erreur,
 # ------------------------------------------------------------------
 # Référentiel (sections imbriquées / questions, avec sous-questions et dépendances)
 # ------------------------------------------------------------------
+@app.get("/api/refs")
+def get_ref_texts(user: dict = Depends(current_user)):
+    """Texte officiel de chaque référence BPP, pour l'info-bulle de chaque bulle de référence.
+    Le référentiel ne stocke qu'un extrait par question (celui de sa 1re référence) : pour chaque
+    référence, on retient l'extrait d'une question dont c'est la 1re référence, de préférence une
+    question de premier niveau (texte complet plutôt qu'un alinéa)."""
+    rows = fetch_all(
+        """
+        SELECT DISTINCT ON (trim(ref)) trim(ref) AS ref, ref_text
+        FROM questions
+        WHERE ref IS NOT NULL AND trim(ref) <> '' AND ref_text IS NOT NULL AND trim(ref_text) <> ''
+        ORDER BY trim(ref), (parent_question_id IS NOT NULL), length(ref_text) DESC, sort_order
+        """
+    )
+    return {r["ref"]: r["ref_text"] for r in rows}
+
+
 @app.get("/api/questionnaire")
 def get_questionnaire(user: dict = Depends(current_user)):
     sections = fetch_all("SELECT id, parent_id, title, level FROM sections ORDER BY sort_order")
