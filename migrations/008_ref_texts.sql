@@ -1,5 +1,5 @@
 -- Texte officiel de chaque référence BPP (info-bulle de chaque bulle « BPP x.yy »).
--- Généré par tools/import_ref_texts.py depuis la feuille « ordre question » du référentiel Excel.
+-- Généré (outil remplacé depuis par tools/referentiel.py) depuis la feuille « ordre question » du référentiel Excel.
 -- Idempotent : un texte existant est remplacé par celui du fichier.
 CREATE TABLE IF NOT EXISTS ref_texts (ref TEXT PRIMARY KEY, texte TEXT NOT NULL);
 INSERT INTO ref_texts (ref, texte) VALUES
