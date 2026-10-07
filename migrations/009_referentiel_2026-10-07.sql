@@ -9,6 +9,7 @@ END $$;
 
 -- Textes officiels des références
 CREATE TABLE IF NOT EXISTS ref_texts (ref TEXT PRIMARY KEY, texte TEXT NOT NULL);
+DELETE FROM ref_texts;  -- la feuille « Références BPP » fait foi
 INSERT INTO ref_texts (ref, texte) VALUES
 ('1.01', 'Afin de protéger la santé humaine, les préparations pharmaceutiques sont réalisées de façon à garantir une qualité constante, appropriée à leur usage. Pour atteindre cet objectif elles sont réalisées en conformité avec les exigences définies dans le présent texte.'),
 ('1.02', 'Les pharmacies à usage intérieur et les pharmacies d''officine disposent d’un système d’assurance qualité qui intègre l’ensemble des règles de bonnes pratiques présentées dans ce texte. Ce système est documenté et contrôlé et son efficacité est surveillée.'),
@@ -82,7 +83,6 @@ préparation est inscrite au Formulaire national de la Pharmacopée française, 
 ('1.20', 'Le pharmacien refuse de réaliser et de dispenser une préparation s''il estime que celle-ci n''est pas conforme à l''état des connaissances scientifiques, médicales et pharmaceutiques et/ou que celle-ci est dangereuse au regard de l’appréciation du risque décrit ci-dessus.'),
 ('1.21', 'En cas d’impossibilité de réalisation de la préparation, il le notifie et propose au prescripteur et/ou donneur d’ordre, si possible, une alternative.'),
 ('1.22', 'Pour le cas des demandes exceptionnelles de préparations en urgence, une évaluation du risque, ainsi qu’une fiche d’instruction de préparation, sont réalisées. Les éléments du dossier de préparation sont complétés a posteriori. Dans tous les cas, un dossier de lot accompagne la préparation.'),
-('1.7', 'Les BPP s’appliquent à la fois à la production et au contrôle de la qualité des préparations pharmaceutiques. Les exigences fondamentales des BPP sont les suivantes : •  le personnel est qualifié et formé à la fonction qu’il occupe. Les responsabilités et les compétences sont clairement définies ; •  les locaux et équipements sont adaptés aux préparations à réaliser ; •  tous les facteurs influençant la qualité des préparations sont évalués et sont décrits dans des documents appropriés ; •   tout procédé de préparation respecte le présent texte. Toutes les étapes requises par les procédures sont documentées. Les dossiers de lot sont établis de manière à permettre la traçabilité complète du lot de la préparation concernée jusqu’à sa libération et sa dispensation 4 Définies à l’article L. 5121-1 du CSP aux patients, en tenant compte des dispositions décrites au chapitre 7 dans le cas où l’activité est externalisée ; •  la manipulation, le transport et le stockage des matières premières à usage pharmaceutique (MPUP) et des articles de conditionnement se déroulent de façon à garantir leur qualité pendant toute leur durée de validité ; •  la qualité des produits obtenus est évaluée et satisfait aux exigences requises ; l’évaluation est documentée et inclut : - un examen des documents de préparation ; - la réalisation de contrôles qualité ; - une comparaison entre les résultats des contrôles qualité et les spécifications exigées ; - une analyse des écarts éventuels. •  les lots ne sont libérés qu’après vérification et attestation de leur conformité aux spécifications requises ; •  les réclamations et les non-conformités concernant les préparations pharmaceutiques, les MPUP et les articles de conditionnement sont examinées et étudiées afin de prendre les mesures correctives adaptées.'),
 ('2.01', 'La mise en place et le maintien d''un système d''assurance de la qualité satisfaisant, de même que la qualité de la réalisation des préparations, reposent sur l’implication de l''ensemble du personnel. Pour cette raison, la pharmacie dispose d''un personnel qualifié, en nombre suffisant pour mener à bien toutes les tâches qui lui incombent. Les responsabilités individuelles sont clairement définies et comprises par les intéressés et l’ensemble de l’équipe. Tous les membres du personnel ont connaissance des principes d’assurance qualité qui concernent leurs activités ; il convient de leur assurer une formation au poste de travail et une formation continue permettant notamment, de connaître les instructions d''hygiène et de sécurité en rapport avec l''activité exercée.'),
 ('2.02', 'La réalisation de la préparation est menée, sous la responsabilité du pharmacien, par des personnes compétentes et qualifiées, et suivant une formation continue adaptée aux tâches réalisées conformément aux textes en vigueur. Le secret professionnel s’impose à l’ensemble du personnel.'),
 ('2.03', 'Le niveau de formation des membres du personnel est adapté aux tâches qu’ils effectuent.'),
@@ -164,10 +164,10 @@ permettre le traitement des demandes urgentes et respecter le secret médical. I
 ('3.47', 'Les matériels et installations de préparation sont adaptés et conçus, installés, entretenus et nettoyés de manière à garantir une production de médicaments de qualité appropriée.'),
 ('3.48', 'Le pharmacien désigné comme responsable des préparations prend la décision finale de qualification des matériels et des installations. Pour cela, il tient compte des références normatives et peut recourir à une évaluation du risque. Il définit les conditions de requalification et leur périodicité.'),
 ('3.49', 'Entre deux opérations de qualification, le contrôle de certains paramètres permet de s’assurer du bon fonctionnement des matériels et installations. La fréquence, les modalités de réalisation et les critères d’acceptation de ces contrôles sont définis par le pharmacien désigné comme responsable des préparations.'),
-('4.01', 'Une documentation exhaustive, révisée, imprimée ou sur support électronique est un outil de transmission et de conservation de l''information essentiel au système qualité pharmaceutique. Elle permet d’assurer la conformité des opérations aux exigences du présent texte. Que le support soit électronique ou papier, il est nécessaire que le système soit protégé contre des modifications non autorisées, contre les pertes de données et que les données demeurent disponibles pendant toute la durée de conservation exigée pour les documents.')
+('4.01', 'Une documentation exhaustive, révisée, imprimée ou sur support électronique est un outil de transmission et de conservation de l''information essentiel au système qualité pharmaceutique. Elle permet d’assurer la conformité des opérations aux exigences du présent texte. Que le support soit électronique ou papier, il est nécessaire que le système soit protégé contre des modifications non autorisées, contre les pertes de données et que les données demeurent disponibles pendant toute la durée de conservation exigée pour les documents.'),
+('4.02', 'Des documents clairs et lisibles évitent les erreurs inhérentes aux communications orales et garantissent la traçabilité de la préparation pharmaceutique. Les données manuscrites sont limitées et validées.')
 ON CONFLICT (ref) DO UPDATE SET texte = EXCLUDED.texte;
 INSERT INTO ref_texts (ref, texte) VALUES
-('4.02', 'Des documents clairs et lisibles évitent les erreurs inhérentes aux communications orales et garantissent la traçabilité de la préparation pharmaceutique. Les données manuscrites sont limitées et validées.'),
 ('4.03', 'En fonction des risques identifiés par l’établissement, il peut être mis en place un système informatisé pour gérer les aspects documentaires et la réalisation des préparations pharmaceutiques.'),
 ('4.04', 'La documentation est gérée par une procédure de maîtrise des documents qui intègre et respecte le cadre fixé par les règles générales de gestion documentaire définies au sein de l’établissement.'),
 ('4.05', 'Il convient de documenter tout évènement significatif ayant trait à la qualité des produits, y compris les appréciations du risque et les justificatifs ayant conduit aux variations par rapport aux exigences figurant dans le présent texte.'),
@@ -242,6 +242,7 @@ De l’ensemble de ces instructions découlent une ou plusieurs fiche(s) de cont
 ('5.04', 'Les opérations de préparation sont exécutées par du personnel qualifié au sens du CSP placé sous l’autorité technique du pharmacien désigné comme responsable des préparations.'),
 ('5.05', 'Les locaux, les équipements, les matériels (incluant les systèmes informatiques) et les installations sont appropriés aux opérations de préparation et sont en état de fonctionner.'),
 ('5.06', 'La préparation s’effectue sur la base de procédures écrites. Les opérations importantes à effectuer y sont indiquées de façon détaillée. Les différentes étapes de la préparation sont documentées (fiche de préparation).'),
+('5.07', 'Toutes les mesures techniques et organisationnelles nécessaires sont prises pour éviter les confusions ou les erreurs.'),
 ('5.08', 'Les MPUP et les articles de conditionnement réceptionnés et les préparations terminées sont mis en quarantaine physiquement, et informatiquement le cas échéant, immédiatement après leur réception ou leur préparation.'),
 ('5.09', 'Seuls des MPUP et des articles de conditionnement approuvés et libérés en vue de leur usage peuvent être employés pour la préparation.'),
 ('5.10', 'Les MPUP et les articles de conditionnement sont stockés dans les conditions appropriées établies par le fabricant et de façon ordonnée en vue de permettre une rotation des stocks.'),
@@ -324,8 +325,6 @@ INSERT INTO ref_texts (ref, texte) VALUES
 ('5.67', 'La personne responsable du contrôle, et le cas échéant, la personne responsable des opérations de préparation évalue s’il est nécessaire d’effectuer des contrôles supplémentaires sur la préparation.'),
 ('5.68', 'La personne en charge de la libération des préparations décide, après évaluation de tous les documents pertinents, notamment des résultats de contrôles supplémentaires, si la préparation en cours de réattribution peut être libérée. Cette libération est enregistrée dans le dossier de lot de la préparation correspondante.'),
 ('5.69', 'Dans le cas d’une sous-traitance, les éléments relatifs à la réattribution sont à contractualiser.'),
-('5.7', 'Toutes les mesures techniques et organisationnelles nécessaires sont prises pour éviter les confusions ou les erreurs.'),
-('5.8', 'Les MPUP et les articles de conditionnement réceptionnés et les préparations terminées sont mis en quarantaine physiquement, et informatiquement le cas échéant, immédiatement après leur réception ou leur préparation.'),
 ('6.01', 'Le contrôle de la qualité pharmaceutique consiste en la mise en oeuvre d’opérations de mesure (analyses) ou d’examen des caractéristiques des MPUP, des articles de conditionnement, des préparations en cours de réalisation et des préparations terminées en comparant les résultats obtenus aux exigences spécifiées. L’objectif est de déterminer s’ils sont conformes pour chacune de leurs caractéristiques et de prendre pour chacun une décision d’acceptation ou de refus.'),
 ('6.02', 'Le contrôle de la qualité concerne l’échantillonnage (MPUP, articles de conditionnement, préparations terminées…), l’établissement de spécifications et leur analyse, ainsi que l’organisation, l’établissement des documents et des procédures de libération. L’ensemble garantit que les contrôles nécessaires et appropriés ont été bien effectués et que les MPUP, les articles de conditionnement et les préparations ne sont libérés qu’une fois que leur qualité a été jugée satisfaisante. Le contrôle de la qualité participe à toutes les décisions qui peuvent concerner la qualité d’une préparation. Dans le cadre de la réalisation des préparations pharmaceutiques, le contrôle permet de garantir que les analyses et opérations nécessaires et appropriées ont été effectuées en vue d’évaluer leur qualité pharmaceutique.'),
 ('6.03', 'Les différents contrôles entrant dans le cycle de vie des préparations sont :
@@ -470,14 +469,14 @@ préparations terminées stériles ;
 ('6.82', 'Les durées de stabilité établies à partir d’analyses sont privilégiées.'),
 ('6.83', 'Les méthodes analytiques utilisées pour l’étude de la stabilité des préparations permettent la quantification de la ou les substance(s) active(s) et des produits de dégradation et de détecter toute autre modification des caractéristiques de la préparation. Elles font l’objet d’une validation.'),
 ('6.84', 'La stabilité microbiologique concerne l’ensemble des préparations réalisées et conservées avec pour objectif de démontrer au cours du temps le maintien de la qualité microbiologique en accord avec les monographies de la Pharmacopée Européenne.'),
-('6.85', 'L''absence d''interactions contenant-contenu doit être recherchée. Une analyse du risque d''interactions est conduite en se basant notamment sur la présence d''excipients à risque dans la formule (agents de surface, solutions hydroalcooliques, excipients lipidiques ou lipophiles...). Les données disponibles sont recherchées à partir des données de la littérature, des données fournisseurs, ou de données issues de recherches développées et validées en interne par l''établissement.')
-ON CONFLICT (ref) DO UPDATE SET texte = EXCLUDED.texte;
-INSERT INTO ref_texts (ref, texte) VALUES
+('6.85', 'L''absence d''interactions contenant-contenu doit être recherchée. Une analyse du risque d''interactions est conduite en se basant notamment sur la présence d''excipients à risque dans la formule (agents de surface, solutions hydroalcooliques, excipients lipidiques ou lipophiles...). Les données disponibles sont recherchées à partir des données de la littérature, des données fournisseurs, ou de données issues de recherches développées et validées en interne par l''établissement.'),
 ('7.01', 'Toute sous-traitance s’effectue dans un cadre contractuel, dans le respect des textes en vigueur, des présentes bonnes pratiques (BPP) et le cas échéant des Bonnes Pratiques de Fabrication (BPF) pour les établissements pharmaceutiques.'),
 ('7.02', 'Une sous-traitance est envisageable pour les activités suivantes :
 - la totalité des opérations de préparation (incluant le conditionnement primaire et l’étiquetage) ;
 - le contrôle : MPUP et/ou préparations terminées ;
-- le transport de la préparation.'),
+- le transport de la préparation.')
+ON CONFLICT (ref) DO UPDATE SET texte = EXCLUDED.texte;
+INSERT INTO ref_texts (ref, texte) VALUES
 ('7.03', 'Le cadre de la sous-traitance est défini de manière appropriée, convenue et contrôlée afin d’éviter tout malentendu susceptible de conduire à un travail ou une préparation de qualité insuffisante.'),
 ('7.04', 'Un contrat écrit est établi entre le donneur d’ordre et le sous-traitant en vue de fixer clairement les obligations de chaque partie ainsi que les exigences, les tâches et les responsabilités dévolues à chaque partie.'),
 ('7.05', 'Pour des raisons pratiques et pour clarifier les responsabilités de chacun, un contrat global est à privilégier. Dans le cas où un contrat global ne serait pas possible, les différents contrats sont réunis pour être consultables ensemble.'),
@@ -548,6 +547,7 @@ froid, abri de la lumière).'),
 - la mise à disposition des consommables stériles tels que les vêtements, articles de conditionnement ;
 - la manipulation des déchets et leur élimination ;
 - le nettoyage et la désinfection des locaux et équipement.'),
+('8.01', 'Toute réclamation concernant la qualité des préparations pharmaceutiques terminées (erreur, défaut, et autres signes de problèmes de qualité) est examinée selon des procédures écrites.'),
 ('8.02', 'Un système de rappel des préparations est organisé permettant de retirer rapidement et efficacement une préparation défectueuse.'),
 ('8.03', 'Le pharmacien s''assure de la mise en oeuvre d''un système permettant l''enregistrement, le traitement des réclamations et, si  nécessaire, le rappel des préparations concernées'),
 ('8.04', 'Des procédures documentées décrivent ces opérations qui sont à effectuer rapidement et rigoureusement.'),
@@ -555,17 +555,14 @@ froid, abri de la lumière).'),
 ('8.06', 'L''ensemble des analyses et des mesures prises est enregistré et conservé dans le dossier de lot.'),
 ('8.07', 'Le pharmacien met en oeuvre un plan d''action (actions correctives et délai de mise en oeuvre, modification des procédures) afin d''éviter que le problème constaté ne se reproduise.'),
 ('8.08', 'Des procédures écrites concernant l’organisation du rappel sont établies.'),
-('8.1', 'Toute réclamation concernant la qualité des préparations pharmaceutiques terminées (erreur, défaut, et autres signes de problèmes de qualité) est examinée selon des procédures écrites.'),
+('8.09', 'Lorsqu’un défaut susceptible de porter atteinte à la santé est constaté, il convient de procéder sans délai au retrait de la préparation et à l’information de l’autorité concernée.'),
 ('8.10', 'Le rappel de toutes les préparations incriminées est réalisé, notamment en informant les donneurs d’ordre, grâce aux données présentes dans le dossier de lot de la préparation dans lequel figurent les copies des prescriptions ou tout autre élément permettant d''en assurer la traçabilité.'),
 ('8.11', 'Toutes les préparations rappelées sont identifiées en tant que telles et stockées dans un endroit séparé en attendant la décision de destruction par le pharmacien.'),
 ('8.12', 'Un rapport détaillé des opérations de rappel comprenant notamment un bilan comparatif des quantités distribuées et récupérées est rédigé et conservé dans le dossier de lot.'),
-('8.9', 'Lorsqu’un défaut susceptible de porter atteinte à la santé est constaté, il convient de procéder sans délai au retrait de la préparation et à l’information de l’autorité concernée.'),
 ('9.01', 'L’auto-inspection fait partie du système d’assurance de la qualité et est réalisée de façon répétée en vue de contrôler la mise en oeuvre et le respect des Bonnes Pratiques de Préparation (BPP) et de proposer des mesures correctives nécessaires.'),
 ('9.02', 'Le personnel, les locaux, le matériel, les documents, la préparation (au sens production), le contrôle de la qualité, la libération pharmaceutique, les dispositions prises pour traiter les réclamations et les rappels et le système d’auto-inspection sont examinés à intervalles réguliers, de façon à vérifier leur conformité avec les principes d’assurance de la qualité.'),
 ('9.03', 'Des auto-inspections sont conduites préférentiellement par des personnes n’intervenant pas directement dans le procédé observé mais compétentes dans le domaine.'),
 ('9.04', 'Toutes les auto-inspections font l’objet d’un compte rendu. Les rapports contiennent toutes les observations faites pendant les auto-inspections et, le cas échéant, des propositions de mesures correctives. Des comptes rendus concernant les mesures prises ultérieurement sont également rédigés.'),
-('LD1 046', 'Les faux plafonds sont scellés pour éviter les contaminations provenant de l’espace supérieur. Ils sont étanches pour garantir le maintien du gradient de pression dans une ZAC.'),
-('LD1 116.', 'Le personnel extérieur amené à pénétrer dans ces locaux (ex : personnel de sociétés d’entretien,  de construction ou de nettoyage) est informé des procédures applicables dans la ZAC et les respecte.'),
 ('LD1.001', 'Le procédé et l’environnement de préparation sont choisis afin de maitriser les risques de contamination ; ils font régulièrement l’objet d’une évaluation et de contrôles appropriés.'),
 ('LD1.002', 'Il existe trois principaux procédés de préparation des médicaments stériles :
 • la stérilisation terminale ;
@@ -621,13 +618,13 @@ Un risque potentiel de contamination microbiologique du produit peut apparaitre 
 ('LD1.039', 'Les caractéristiques particulaires indiquées dans la colonne « au repos » sont à respecter en l’absence de personnel, à l’arrêt de la production après un temps d’épuration dépendant des caractéristiques de l’installation.'),
 ('LD1.040', 'L’entrée et la sortie dans une ZAC se fait par des sas. Les sas sont des volumes de transit entre les zones propres et non classées ou entre des locaux classés mais de risques différents. Les sas peuvent être des locaux ou des zones de circulation.'),
 ('LD1.041', 'Les sas participent au maintien du gradient de pression et de la classification de la ZAC dans laquelle ils donnent accès. Les sas font partie de la ZAC et leur surveillance et leur contrôle sont identiques à celui des ZAC.'),
-('LD1.042', 'Les sas personnels et les vestiaires sont distincts. Les vestiaires sont conçus pour séparer les vêtements de ville et de travail et participent à la maîtrise des flux du personnel. Les sas personnels permettent au personnel de revêtir la tenue appropriée à la classe cible du local de la ZAC dans lequel il entre.')
-ON CONFLICT (ref) DO UPDATE SET texte = EXCLUDED.texte;
-INSERT INTO ref_texts (ref, texte) VALUES
+('LD1.042', 'Les sas personnels et les vestiaires sont distincts. Les vestiaires sont conçus pour séparer les vêtements de ville et de travail et participent à la maîtrise des flux du personnel. Les sas personnels permettent au personnel de revêtir la tenue appropriée à la classe cible du local de la ZAC dans lequel il entre.'),
 ('LD1.043', 'Les différentes portes d’un sas ne peuvent pas être ouvertes en même temps. Un système de blocage alterné (asservissement mécanique ou électronique des portes) est utilisé en vue d’empêcher l’ouverture de plus d’une porte à la fois. Le cas échéant, une temporisation est programmée.'),
 ('LD1.044', 'Dans les ZAC, toutes les surfaces apparentes (y compris les plafonds) sont lisses, lavables, imperméables et sans fissure afin de réduire la libération ou l’accumulation de particules ou de microorganismes et de permettre l’usage répété de produits de nettoyage et, le cas échéant, de désinfectants.'),
 ('LD1.045', 'La pose de carrelage est à proscrire en lien avec la difficulté de nettoyage des joints. Les remontées en plinthes affleurantes évitent l’accumulation de poussières.'),
-('LD1.046', 'Les faux plafonds sont scellés pour éviter les contaminations provenant de l’espace supérieur. Ils sont étanches pour garantir le maintien du gradient de pression dans une ZAC.'),
+('LD1.046', 'Les faux plafonds sont scellés pour éviter les contaminations provenant de l’espace supérieur. Ils sont étanches pour garantir le maintien du gradient de pression dans une ZAC.')
+ON CONFLICT (ref) DO UPDATE SET texte = EXCLUDED.texte;
+INSERT INTO ref_texts (ref, texte) VALUES
 ('LD1.047', 'Les canalisations et les gaines sont installées de façon à ne pas créer de recoins, d’orifices non scellés et de surface difficiles à nettoyer.'),
 ('LD1.048', 'Les éviers et les canalisations d’évacuation sont exclus des zones de classe A et B.'),
 ('LD1.049', 'Une cascade de pression positive est maintenue en toute circonstance afin d’obtenir la classe de propreté la plus adaptée au niveau de la zone de préparation. Les zones entre lesquelles il est important de maintenir une différence de pression sont équipées d’indicateurs de différentiel de pression. Un relevé de ces indicateurs est effectué.'),
@@ -726,13 +723,13 @@ INSERT INTO ref_texts (ref, texte) VALUES
 ('LD1.141', 'L’essai de stérilité ou une méthode équivalente validée et appliquée à la préparation terminée est considéré comme le dernier d’une série de contrôles permettant de garantir la stérilité.'),
 ('LD1.142', 'Les échantillons prélevés pour l’essai de stérilité sont représentatifs du lot dans les conditions prévues par la Pharmacopée dans le cas de production en série. Pour les préparations magistrales dont la taille des lots ne permet pas de suivre les prescriptions de la Pharmacopée Européenne, le pharmacien en charge de la libération évalue le risque associé à la stérilité en prenant en compte, notamment, les différents paramètres critiques lui permettant d’avoir une garantie suffisante en vue de la libération de la préparation.'),
 ('LD1.143', 'Dans le cas où la réalisation des préparations fait intervenir un procédé identique, un plan spécifique d’échantillonnage microbiologique peut être réalisé. Ce plan spécifique est représentatif du moment de production étudié et prend en compte tout changement intervenu dans le procédé (par exemple lors d’un changement de personnel).'),
-('LD1.144', 'Quelle que soit la taille du lot, pour les préparations faisant intervenir plus de 2 substances actives, il convient de mettre en place une organisation permettant de maitriser les risques d’erreur liés au nombre de substances actives (inversion / omission / addition) intervenant dans la préparation.')
-ON CONFLICT (ref) DO UPDATE SET texte = EXCLUDED.texte;
-INSERT INTO ref_texts (ref, texte) VALUES
+('LD1.144', 'Quelle que soit la taille du lot, pour les préparations faisant intervenir plus de 2 substances actives, il convient de mettre en place une organisation permettant de maitriser les risques d’erreur liés au nombre de substances actives (inversion / omission / addition) intervenant dans la préparation.'),
 ('LD1.145', 'Un dossier de lot pour chaque préparation est réalisé. Une libération pharmaceutique est organisée et procédurée comme définie par la stratégie libératoire (décrit au chapitre 6).'),
 ('LD1.146', 'Il convient de porter une attention particulière aux résultats de la surveillance des ZAC lors de la libération des préparations terminées.'),
 ('LD1.147', 'Des seuils d’alerte et d’action appropriés sont définis dans une procédure pour les résultats de la surveillance particulaire et microbiologique. En cas de dépassement de ces limites, des procédures imposent des mesures correctives.'),
-('LD1.148', 'Ces seuils tiennent compte notamment de la nature du germe et de son potentiel de dissémination (par exemple, présence d’un champignon filamenteux).'),
+('LD1.148', 'Ces seuils tiennent compte notamment de la nature du germe et de son potentiel de dissémination (par exemple, présence d’un champignon filamenteux).')
+ON CONFLICT (ref) DO UPDATE SET texte = EXCLUDED.texte;
+INSERT INTO ref_texts (ref, texte) VALUES
 ('LD1.149', 'Les opérations aseptiques sont systématiquement surveillées en activité par des contrôles microbiologiques adaptés afin de détecter un niveau inhabituel de contamination.'),
 ('LD1.150', 'Un plan d’échantillonnage est défini et comprend l’analyse d’échantillons volumétriques d’air et des contrôles de surface. Il tient compte d’une analyse de risques, des normes ISO en vigueur et définit notamment les lieux, la fréquence et le nombre de prélèvements.'),
 ('LD1.151', 'Les méthodes d’échantillonnage utilisées en activité n’interférent avec la protection des zones.'),
@@ -754,6 +751,8 @@ recommandations.'),
 - Un chiffre désignant le type de danger, par exemple « 3 » pour les dangers d’exposition ;
 - Deux chiffres correspondant à la numérotation des dangers tels que « toxicité aigüe ».'),
 ('LD2.005', 'Dans ce cas, la mention de « danger » peut ne pas être disponible. Le Résumé des Caractéristiques Produits (RCP) est étudié pour recueillir les informations utiles (effet pharmacologique et effets indésirables, dose usuelle, toxicité aigüe, toxicité chronique, mutagénicité).'),
+('LD2.006', 'Les valeurs limites d’exposition professionnelle sont utilisées lorsqu’elles sont connues.'),
+('LD2.007', 'L’exposition est fonction des caractéristiques physico-chimiques, de la quantité manipulée, de la fréquence, de la durée de manipulation de la substance ainsi que des conditions de sa mise en oeuvre.'),
 ('LD2.008', 'L’exposition varie en fonction notamment de l’utilisation :
 - d’EPC permettant un confinement ;
 - d’EPI adaptés à la substance manipulée.'),
@@ -794,7 +793,7 @@ peut être utilisé en fonction de l’analyse de risque. Il n’est pas possibl
 ('LD2.031', 'Les matériels de préparation réutilisables utilisés pour la réalisation de préparations contenant des produits à risque sont dédiés à cette activité. Ils sont identifiés et faciles à nettoyer pour limiter la contamination chimique et biologique.'),
 ('LD2.032', 'Des EPC adaptés aux substances manipulées sont installés dans les locaux ou zones.'),
 ('LD2.033', 'Pour les préparations pulvérulentes non stériles (comme la réalisation de gélules), l’utilisation d’enceintes ventilées aspirantes ou d’isolateurs (ou boîtes à gants) est adaptée. L’environnement immédiat à cet équipement peut être non classé.'),
-('LD2.034.', 'Les EPC contenant des filtres sont conçus pour que les filtres soient remplacés et que la maintenance soit assurée en limitant la contamination.'),
+('LD2.034', 'Les EPC contenant des filtres sont conçus pour que les filtres soient remplacés et que la maintenance soit assurée en limitant la contamination.'),
 ('LD2.035', 'Les filtres sont adaptés à la protection attendue (comme l’utilisation de filtres à charbon pour l’épuration des vapeurs, ou de filtres HEPA pour assurer une filtration mécanique des particules solides et des agents biologiques). Lors de l’utilisation des filtres une attention particulière est portée sur leur suivi et leur maintenance.'),
 ('LD2.036', 'Une comparaison de différents EPC pouvant être utilisés pour réduire le niveau d’exposition lors de la réalisation de préparations non stériles est décrite dans le tableau. 
 Concernant les préparations non stériles :
@@ -830,8 +829,6 @@ Le choix des EPC est également en accord avec les exigences de la LD 1 du prés
 • La conduite à tenir en cas de réception d’emballages endommagés ;
 • La destruction des produits ou substances ou préparations périmés et/ou non administrés.'),
 ('LD2.058', 'Les interventions du personnel extérieur au service, et notamment celles des services d’entretien et de maintenance, sont connues du pharmacien désigné comme responsable des préparations et enregistrées.'),
-('LD2.06', 'Les valeurs limites d’exposition professionnelle sont utilisées lorsqu’elles sont connues.'),
-('LD2.07', 'L’exposition est fonction des caractéristiques physico-chimiques, de la quantité manipulée, de la fréquence, de la durée de manipulation de la substance ainsi que des conditions de sa mise en oeuvre.'),
 ('LD3.01', 'Une évaluation de la faisabilité technique de la préparation (cf. points 1.13 et 1.16 des chapitres généraux des présentes bonnes pratiques) est un préalable à toute réalisation de ces préparations et repose en partie sur les informations mises à jour et transmises par le promoteur au pharmacien assurant la gérance de la PUI, conformément aux exigences réglementaires. Le pharmacien peut refuser une préparation selon les principes édictés au point 1.20 des chapitres généraux.'),
 ('LD3.02', 'Le promoteur veille à ce que les préparations soient réalisées conformément aux présentes bonnes pratiques et à l’ensemble des informations du dossier de préparation pharmaceutique (cf. glossaire) du médicament couvert par l’autorisation de RIPH.'),
 ('LD3.03', 'Le personnel appelé à collaborer à la réalisation des opérations mentionnées au paragraphe « Principes » ci-dessus est qualifié et reçoit une formation spécifique complémentaire si nécessaire.'),
@@ -861,9 +858,7 @@ Le choix des EPC est également en accord avec les exigences de la LD 1 du prés
 ('LD3.23', 'Pour l’échantillothèque des préparations, des échantillons de chaque lot conditionné et de chaque période de la recherche sont conservés, y compris pour les produits mis en insu, pendant au moins deux ans après la fin notifiée de la RIPH par le promoteur dans laquelle le lot a été utilisé. Cela permet, le cas échéant, la confirmation de l’identité du produit dans le cadre  d’investigations  portant  sur  des résultats d’essais incohérents.'),
 ('LD3.24', 'Les opérations de réclamations, rappels, retours et destruction des préparations sont effectuées dans des conditions définies par le promoteur et spécifiées dans des procédures écrites.'),
 ('LD3.25', 'Des procédures visant à rappeler les préparations et à consigner ces opérations sont fixées par le promoteur en collaboration avec le pharmacien responsable des préparations. L’investigateur et la personne dûment mandatée par le promoteur ont connaissance de leurs obligations dans le cadre de cette procédure de rappel.'),
-('LD3.26', 'Les médicaments expérimentaux non utilisés sont retournés et/ou détruits dans des conditions définies et spécifiées par le promoteur.')
-ON CONFLICT (ref) DO UPDATE SET texte = EXCLUDED.texte;
-INSERT INTO ref_texts (ref, texte) VALUES
+('LD3.26', 'Les médicaments expérimentaux non utilisés sont retournés et/ou détruits dans des conditions définies et spécifiées par le promoteur.'),
 ('LD3.27', 'La destruction des médicaments expérimentaux non utilisés est effectuée par lieu  de recherche  ou  par période de recherche après réconciliation entre les produits expédiés, les produits utilisés et ceux retournés et après que les écarts constatés entre les quantités  des produits  mentionnées  ci-dessus ont été étudiés et motivés de façon satisfaisante et qu’un bilan comparatif a été accepté par le promoteur. Les opérations de destruction sont enregistrées afin de pouvoir être comptabilisées. Il appartient au promoteur de conserver les dossiers afférents à ces opérations.'),
 ('LD3.28', 'Après la destruction des médicaments expérimentaux, un certificat daté ou une attestation confirmant  la réalisation de cette opération est remis au promoteur. Ces documents identifient clairement, ou permettent d’assurer la traçabilité des lots et/ou des numéros de traitement et/ou des numéros de personnes incluses dans la RIPH concernée, ainsi que les quantités effectivement détruites.')
 ON CONFLICT (ref) DO UPDATE SET texte = EXCLUDED.texte;
@@ -2918,7 +2913,7 @@ INSERT INTO questions (id, code, section_id, parent_question_id, question, ref, 
 ('Q150', 'Q150', 10, NULL, 'Il existe une procédure sur la conduite à tenir en cas d''incident en cours de préparation (bris ou déversement accidentel)', 'LD2.057', NULL, 'LD2.057', NULL, NULL, FALSE, 257),
 ('Q151', 'Q151', 10, NULL, 'La procédure sur la conduite à tenir en cas d''incident en cours de préparation (bris ou déversement accidentel)  précise les les éléments devant être transmis au médecin du travail', 'LD2.057', NULL, 'LD2.057', NULL, NULL, FALSE, 258),
 ('Q152', 'Q152', 10, NULL, 'Il existe une procédure sur la conduite à tenir en cas conduite à tenir en cas d’incident ou de défaillance d’un dispositif, d’un équipement etc.', 'LD2.057', NULL, 'LD2.057', NULL, NULL, FALSE, 259),
-('Q153', 'Q153', 10, NULL, 'Il existe une procédure de gestion des anomalies et des réclamations', '4.25', NULL, '4.25, 8.1', NULL, NULL, FALSE, 260),
+('Q153', 'Q153', 10, NULL, 'Il existe une procédure de gestion des anomalies et des réclamations', '4.25', NULL, '4.25, 8.01', NULL, NULL, FALSE, 260),
 ('Q154', 'Q154', 10, NULL, 'Il existe une procédure pour le recueil et la déclaration des effets indésirables graves dus aux préparations pharmaceutiques.', '4.27', NULL, '4.27', NULL, NULL, FALSE, 261),
 ('Q155', 'Q155', 10, NULL, 'La procédure pour le recueil et la déclaration des effets indésirables graves dus aux préparations pharmaceutiques prévoit leur signalement aux autorités compétentes', '4.27', NULL, '4.27', NULL, NULL, FALSE, 262),
 ('Q156', 'Q156', 10, NULL, 'La procédure pour le recueil et la déclaration des effets indésirables graves dus aux préparations pharmaceutiques prévoit pour le signalement', '4.28', NULL, '4.28', NULL, NULL, TRUE, 263),
@@ -2928,7 +2923,7 @@ INSERT INTO questions (id, code, section_id, parent_question_id, question, ref, 
 ('Q157', 'Q157', 10, NULL, 'Les déclarations de pharmacovigilance s''effectuent selon la réglementation en vigueur', '4.29', NULL, '4.29', NULL, NULL, FALSE, 267),
 ('Q158', 'Q158', 10, NULL, 'La préparation litigieuse est conservée', '4.29', NULL, '4.29', NULL, NULL, FALSE, 268),
 ('Q159', 'Q159', 10, NULL, 'Il existe une procédure pour le rappel rapide et exhaustif des préparations', '8.02', NULL, '8.02, 8.04, 8.08, 4.26', NULL, NULL, FALSE, 269),
-('Q160', 'Q160', 10, NULL, 'La procédure de rappel des préparations prévoit que, lorsqu’un défaut susceptible de porter atteinte à la santé est constaté, il exisite une chaine hiérarchique identifiée de déclaration (Pharmacien gérant, direction générale)', '8.9', NULL, '8.9', NULL, NULL, FALSE, 270),
+('Q160', 'Q160', 10, NULL, 'La procédure de rappel des préparations prévoit que, lorsqu’un défaut susceptible de porter atteinte à la santé est constaté, il exisite une chaine hiérarchique identifiée de déclaration (Pharmacien gérant, direction générale)', '8.09', NULL, '8.09', NULL, NULL, FALSE, 270),
 ('Q161', 'Q161', 10, NULL, 'La procédure de rappel des préparations prévoit que, dans le cas d''une sous-traitance, le donneur d''ordre est informé du rappel des préparations et les données de traçabilité lui sont fournies', '8.10', NULL, '8.10', NULL, NULL, FALSE, 271),
 ('Q162', 'Q162', 10, NULL, 'La procédure de rappel des préparations prévoit que les préparations rappellées sont mises en quarantaine', '8.11', NULL, '8.11', NULL, NULL, FALSE, 272),
 ('Q163', 'Q163', 10, NULL, 'Il existe une procédure de déclaration/documentation relative aux écarts de qualité des produits', '4.05', NULL, '4.05', NULL, NULL, FALSE, 273),
@@ -2975,7 +2970,7 @@ INSERT INTO questions (id, code, section_id, parent_question_id, question, ref, 
 ('Q187', 'Q187', 19, NULL, 'De l’ensemble des instructions du dossier de préparation découlent une ou plusieurs fiche(s) de préparation et une ou plusieurs fiche(s) de conditionnement.', '4.34', NULL, '4.34', NULL, NULL, FALSE, 313),
 ('Q188', 'Q188', 20, NULL, 'La description des contrôles à réaliser en cours et en fin de préparation figurent dans le dossier de préparation', '4.35', NULL, '4.35, 5.49', NULL, NULL, FALSE, 314),
 ('Q189', 'Q189', 20, NULL, 'De l’ensemble de ces instructions découlent une ou plusieurs fiche(s) de contrôle.', '4.35', NULL, '4.35', NULL, NULL, FALSE, 315),
-('Q190', 'Q190', 21, NULL, 'Il existe un dossier de lot pour chaque préparation, permettant une traçabilité complète de la préparation, de sa fabrication à la dispensation au patient', '4.36', NULL, '4.36, LD1.145, 1.7', NULL, NULL, FALSE, 316),
+('Q190', 'Q190', 21, NULL, 'Il existe un dossier de lot pour chaque préparation, permettant une traçabilité complète de la préparation, de sa fabrication à la dispensation au patient', '4.36', NULL, '4.36, LD1.145, 1.07', NULL, NULL, FALSE, 316),
 ('Q191', 'Q191', 21, NULL, 'Le dossier de lot contient :', '4.37', NULL, '4.37, 5.03', NULL, NULL, TRUE, 317),
 ('Q191.01', 'Q191.01', 21, NULL, 'les informations relatives aux MPUP', '4.37', NULL, '4.37', NULL, NULL, FALSE, 318),
 ('Q191.02', 'Q191.02', 21, NULL, 'les informations relatives aux articles de conditionnement', '4.37', NULL, '4.37', NULL, NULL, FALSE, 319),
@@ -3055,7 +3050,7 @@ INSERT INTO questions (id, code, section_id, parent_question_id, question, ref, 
 ('Q210', 'Q210', 22, NULL, 'La liste des personnes autorisées à accéder aux zones de préparation est  formalisée, à jour, et vérifiable via un contrôle d''accès (badge, registre)', '3.13', NULL, '3.13', NULL, NULL, FALSE, 393),
 ('Q211', 'Q211', 22, NULL, 'Pour la réalisation des préparations de catégories 1, 2 et 3 chaque zone/local dédié listé est physiquement identifiable et distinct', '3.15', NULL, '3.15', NULL, NULL, FALSE, 394),
 ('Q212', 'Q212', 22, NULL, 'Le PRP dispose du schéma aéraulique de la zone de préparation et des zones contrôlées attenantes', 'LD1.054', NULL, 'LD1.054', NULL, NULL, FALSE, 395),
-('Q213', 'Q213', 22, NULL, 'Il existe un document à jour recensant les valeurs limites d''exposition professionnelle des substances utilisées lorsqu''elles sont connues', 'LD2.06', NULL, 'LD2.06, LD2.07', NULL, NULL, FALSE, 396),
+('Q213', 'Q213', 22, NULL, 'Il existe un document à jour recensant les valeurs limites d''exposition professionnelle des substances utilisées lorsqu''elles sont connues', 'LD2.006', NULL, 'LD2.006, LD2.007', NULL, NULL, FALSE, 396),
 ('Q214-A', 'Q214-A', 23, NULL, 'Il existe une procédure relative à l''archivage des documents qui fixe la durée d''archivage des documents suivants', '4.47', NULL, '4.47', NULL, NULL, FALSE, 397),
 ('Q214', 'Q214', 23, NULL, 'Analyse de la prescription d''une préparation : durée minimum fixée par l''établissement', '4.47', NULL, '4.47', NULL, NULL, FALSE, 398),
 ('Q215', 'Q215', 23, NULL, 'Dossier de préparation : au moins 5 ans après la date de péremption du dernier lot du produit', '4.47', NULL, '4.47', NULL, NULL, FALSE, 399),
@@ -3167,7 +3162,7 @@ INSERT INTO questions (id, code, section_id, parent_question_id, question, ref, 
 ('Q262', 'Q262', 27, NULL, 'La formation est assurée en interne ou par des organismes habilités (les citer)', '2.17', NULL, '2.17', NULL, NULL, FALSE, 503),
 ('Q263', 'Q263', 27, NULL, 'Un tableau de suivi des compétences est mis en place', '2.17', NULL, '2.17', NULL, NULL, FALSE, 504),
 ('Q264', 'Q264', 27, NULL, 'Les planning, par poste, sont établis en fonction du tableau de suivi des compétences.', '2.17', NULL, '2.17', NULL, NULL, FALSE, 505),
-('Q265', 'Q265', 27, NULL, 'La procédure d''accès aux locaux implique une formation spécifique à l''entrée dans les locaux de préparation, au personnel suceptible d''intervenir dans les locaux (biomédical, technique et hygiène des locaux, prestataire externe…) (éléments de preuve)', 'LD1 116.', NULL, 'LD1 116.', NULL, NULL, FALSE, 506),
+('Q265', 'Q265', 27, NULL, 'La procédure d''accès aux locaux implique une formation spécifique à l''entrée dans les locaux de préparation, au personnel suceptible d''intervenir dans les locaux (biomédical, technique et hygiène des locaux, prestataire externe…) (éléments de preuve)', 'LD1.116', NULL, 'LD1.116', NULL, NULL, FALSE, 506),
 ('Q266', 'Q266', 27, NULL, 'Dans le cas où les prestations de nettoyage, d''entretien, d''évacuation des déchets et de maintenance sont sous-traitées, le cahier des charges prévoit que le prestataire forme le personnel affecté à la spécificité de ses missions', 'LD2.014', NULL, 'LD2.014', NULL, NULL, FALSE, 507),
 ('Q267', 'Q267', 28, NULL, 'Dans le cadre des procédures relatives à l''habillage, à l''hygiène et à la protection du personnel, les éléments suivants sont pris en compte :', '4.23', NULL, '4.23, 2.21, 2.22, 2.23, 2.25, LD1.111, LD1.114', NULL, NULL, TRUE, 508),
 ('Q267.01', 'Q267.01', 28, NULL, 'le port de vêtements et de chaussures de travail adaptés en fonction des travaux à effectuer', '4.23', NULL, '4.23, 2.22, 2.23', NULL, NULL, FALSE, 509),
@@ -3297,7 +3292,7 @@ INSERT INTO questions (id, code, section_id, parent_question_id, question, ref, 
 ('Q330', 'Q330', 34, NULL, 'Il n''y a pas de carrelage', 'LD1.045', NULL, 'LD1.045', NULL, NULL, FALSE, 611),
 ('Q331', 'Q331', 34, NULL, 'Les plinthes sont conçues affleurantes pour limiter l''accumulation de poussières.', 'LD1.045', NULL, 'LD1.045', NULL, NULL, FALSE, 612),
 ('Q332', 'Q332', 34, NULL, 'Les faux plafonds sont scellés et étanches', 'LD1.046', NULL, 'LD1.046', NULL, NULL, FALSE, 613),
-('Q333', 'Q333', 34, NULL, 'L''étanchéité des faux plafonds est vérifiée par un contrôle physique documenté (test de pression, inspection visuelle)', 'LD1 046', NULL, 'LD1 046', NULL, NULL, FALSE, 614),
+('Q333', 'Q333', 34, NULL, 'L''étanchéité des faux plafonds est vérifiée par un contrôle physique documenté (test de pression, inspection visuelle)', 'LD1.046', NULL, 'LD1.046', NULL, NULL, FALSE, 614),
 ('Q334', 'Q334', 34, NULL, 'Les canalisations et les gaines ne perturbent pas le nettoyage et leurs orifices sont scellés et étanches', 'LD1.047', NULL, 'LD1.047', NULL, NULL, FALSE, 615),
 ('Q335', 'Q335', 34, NULL, 'Les éviers et canalisations d''évacuation sont exclus des zones de classe A et B.', 'LD1.048', NULL, 'LD1.048', NULL, NULL, FALSE, 616),
 ('Q336', 'Q336', 34, NULL, 'L''alimentation en air filtré garantit en permanence une pression positive et un écart de pression compris entre 10 et 15 pascals entre locaux adjacents de classes différentes (sauf exception en cas de manipulation de produits à risque pour le personnel et l''environnement, comme les produits pulvérulents)', 'LD1.049', NULL, 'LD1.049, LD1.051', NULL, NULL, FALSE, 617),
@@ -3322,13 +3317,13 @@ INSERT INTO questions (id, code, section_id, parent_question_id, question, ref, 
 ('Q355', 'Q355', 35, NULL, 'La gestion des contrôles microbiologiques est réalisée dans un local dédié de l''unité ou externalisée', '3.29', NULL, '3.29', NULL, NULL, FALSE, 636),
 ('Q356', 'Q356', 35, NULL, 'Les locaux et zones de stockage sont conçus afin d''éviter les confusions et  contaminations croisées.', '3.22', NULL, '3.22, 3.32', NULL, NULL, FALSE, 637),
 ('Q357', 'Q357', 35, NULL, 'Un système et un plan de stockage et de rangement cohérents permettent de réduire le risque de confusion entre les différents produits.', '3.22', NULL, '3.22', NULL, NULL, FALSE, 638),
-('Q358', 'Q358', 35, NULL, 'Les locaux et zones de stockage sont adaptés afin de respecter les différentes catégories de matériels et de produits. Il existe un local / une zone de', '3.30', NULL, '3.30, 3.33, 5.7, 5.8', NULL, NULL, TRUE, 639),
-('Q358.01', 'Q358.01', 35, NULL, 'réception / décartonnage', '3.30', NULL, '3.30, 5.7, 5.8', NULL, NULL, FALSE, 640),
-('Q358.02', 'Q358.02', 35, NULL, 'stockage médicaments', '3.30', NULL, '3.30, 5.7', NULL, NULL, FALSE, 641),
-('Q358.03', 'Q358.03', 35, NULL, 'stockage DMS / consommables', '3.30', NULL, '3.30, 5.7', NULL, NULL, FALSE, 642),
-('Q358.04', 'Q358.04', 35, NULL, 'stockage des prépations en attente de libération', '3.30', NULL, '3.30, 5.7, 5.8', NULL, NULL, FALSE, 643),
-('Q358.05', 'Q358.05', 35, NULL, 'stockage préparations en attente de dispensation', '5.7', NULL, '5.7, 5.8', NULL, NULL, FALSE, 644),
-('Q358.06', 'Q358.06', 35, NULL, 'quarantaine dédiée et identifiée pour les MPUP, DMS ou préparations terminées en quarantaine, refusés, retournés ou rappelés', '3.30', NULL, '3.30, 3.33, 5.7, 5.8', NULL, NULL, FALSE, 645),
+('Q358', 'Q358', 35, NULL, 'Les locaux et zones de stockage sont adaptés afin de respecter les différentes catégories de matériels et de produits. Il existe un local / une zone de', '3.30', NULL, '3.30, 3.33, 5.07, 5.08', NULL, NULL, TRUE, 639),
+('Q358.01', 'Q358.01', 35, NULL, 'réception / décartonnage', '3.30', NULL, '3.30, 5.07, 5.08', NULL, NULL, FALSE, 640),
+('Q358.02', 'Q358.02', 35, NULL, 'stockage médicaments', '3.30', NULL, '3.30, 5.07', NULL, NULL, FALSE, 641),
+('Q358.03', 'Q358.03', 35, NULL, 'stockage DMS / consommables', '3.30', NULL, '3.30, 5.07', NULL, NULL, FALSE, 642),
+('Q358.04', 'Q358.04', 35, NULL, 'stockage des prépations en attente de libération', '3.30', NULL, '3.30, 5.07, 5.08', NULL, NULL, FALSE, 643),
+('Q358.05', 'Q358.05', 35, NULL, 'stockage préparations en attente de dispensation', '5.07', NULL, '5.07, 5.08', NULL, NULL, FALSE, 644),
+('Q358.06', 'Q358.06', 35, NULL, 'quarantaine dédiée et identifiée pour les MPUP, DMS ou préparations terminées en quarantaine, refusés, retournés ou rappelés', '3.30', NULL, '3.30, 3.33, 5.07, 5.08', NULL, NULL, FALSE, 645),
 ('Q359', 'Q359', 35, NULL, 'Le stock de MPUP et articles de condionnement est le plus limité possible dans les locaux de préparation', '3.32', NULL, '3.32, LD2.025', NULL, NULL, FALSE, 646),
 ('Q360', 'Q360', 35, NULL, 'Le stock de MPUP en zone de préparation est limité à un seuil défini (quantité maximale autorisée)', '3.32', NULL, '3.32, LD2.025', NULL, NULL, FALSE, 647),
 ('Q361', 'Q361', 35, NULL, 'Les vestiaires sont facilement accessibles et d’une taille adaptée au nombre de personnes intervenant dans les activités de préparation.', '3.34', NULL, '3.34', NULL, NULL, FALSE, 648),
@@ -3411,7 +3406,7 @@ INSERT INTO questions (id, code, section_id, parent_question_id, question, ref, 
 ('Q430', 'Q430', 51, NULL, 'Les essais de laminarité, vitesse, débit et intégrité des filtres sont tracés', 'LD1.158', NULL, 'LD1.158', NULL, NULL, FALSE, 724),
 ('Q431', 'Q431', 51, NULL, 'La présence physique et le bon fonctionnement des EPC adaptés sont vérifiés régulièrement pour chaque local concerné', 'LD2.032', NULL, 'LD2.032', NULL, NULL, FALSE, 725),
 ('Q432', 'Q432', 51, NULL, 'Les préparations pulvérulentes non stériles sont réalisées dans des enceintes ventilées aspirantes ou des isolateurs (ou boîtes à gants). L’environnement immédiat à cet équipement peut être non classé.', 'LD2.033', NULL, 'LD2.033', NULL, NULL, FALSE, 726),
-('Q433', 'Q433', 51, NULL, 'Les filtres des EPC sont changés en limitant la contamination lors des opérations de maintenance (sac étanche par exemple)', 'LD2.034.', NULL, 'LD2.034.', NULL, NULL, FALSE, 727),
+('Q433', 'Q433', 51, NULL, 'Les filtres des EPC sont changés en limitant la contamination lors des opérations de maintenance (sac étanche par exemple)', 'LD2.034', NULL, 'LD2.034', NULL, NULL, FALSE, 727),
 ('Q434', 'Q434', 51, NULL, 'Les filtres des EPC (HEPA et/ou charbon) font l''objet d''un suivi et d''une maintenance', 'LD2.035', NULL, 'LD2.035', NULL, NULL, FALSE, 728),
 ('Q435', 'Q435', 51, NULL, 'Au repos, la surveillance régulière des zones permettant de vérifier la qualité particulaire correspondant à leur classe est effective', 'LD1.159', NULL, 'LD1.159', NULL, NULL, FALSE, 729),
 ('Q436', 'Q436', 52, NULL, 'Les MPUP et les articles de conditionnement réceptionnés et les préparations terminées sont mis en quarantaine physiquement, et informatiquement le cas échéant, immédiatement après leur réception ou leur préparation.', '5.08', NULL, '5.08', NULL, NULL, FALSE, 730),

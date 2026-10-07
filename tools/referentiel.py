@@ -119,6 +119,7 @@ def main(path):
     out("")
     out("-- Textes officiels des références")
     out("CREATE TABLE IF NOT EXISTS ref_texts (ref TEXT PRIMARY KEY, texte TEXT NOT NULL);")
+    out("DELETE FROM ref_texts;  -- la feuille « Références BPP » fait foi")
     items = sorted(texts.items())
     for k in range(0, len(items), 100):
         out("INSERT INTO ref_texts (ref, texte) VALUES")
