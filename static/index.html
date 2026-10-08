@@ -142,10 +142,11 @@
   .mode-switch button:hover:not(.active){color:var(--blue-dark);}
 
   /* ===== Mise en page : menu à gauche + contenu ===== */
-  .audit-content.fade-out{opacity:0;filter:blur(2px);transition:opacity .2s ease-in, filter .2s ease-in;}
-  .audit-content.fade-hidden{opacity:0;filter:blur(3px);}
-  .audit-content.fade-in{opacity:1;filter:none;transition:opacity .55s cubic-bezier(.22,.61,.36,1), filter .55s cubic-bezier(.22,.61,.36,1);}
-  @media (prefers-reduced-motion: reduce){ .audit-content.fade-in, .audit-content.fade-out{transition:none;filter:none;} }
+  /* fondu enchaîné doux : le contenu ne disparaît jamais complètement (trace pâle), sans flou */
+  .audit-content.fade-out{opacity:.12;transition:opacity .35s cubic-bezier(.4,0,.6,1);}
+  .audit-content.fade-hidden{opacity:.12;}
+  .audit-content.fade-in{opacity:1;transition:opacity .8s cubic-bezier(.45,.05,.35,1);}
+  @media (prefers-reduced-motion: reduce){ .audit-content.fade-in, .audit-content.fade-out{transition:none;} }
   .audit-layout{display:grid;grid-template-columns:300px minmax(0,1fr);gap:28px;align-items:start;}
   /* Menu latéral : dégradé de la charte SFPO (bleu → fuchsia), texte clair */
   .audit-side{
@@ -1533,7 +1534,7 @@ function renderGroupNav(groups, group){
 /* Changement de rubrique en fondu enchaîné doux : l'ancien contenu s'estompe, la page se replace
    en haut de la rubrique, puis le nouveau contenu apparaît (léger flou qui se dissipe).
    onShown : appelé une fois la nouvelle rubrique affichée (ex. aller à une question). */
-const FADE_OUT_MS = 200;
+const FADE_OUT_MS = 350;
 let fadeTimer = null;
 function selectGroup(key, onShown){
   currentGroupKey[auditMode] = key;
