@@ -540,7 +540,19 @@
   .answers label.opt-oui:hover{color:var(--green);} .answers label.opt-non:hover{color:var(--red);}
   .answers label.opt-partiel:hover{color:var(--orange);} .answers label.opt-na:hover{color:var(--gray);}
   .answers input:checked + label{color:#fff;border-color:transparent;}
-  .qcard-extra{margin-top:10px;padding-top:10px;border-top:1px dashed #d5dbe1;}
+  .qcard-extra{margin-top:8px;display:flex;flex-wrap:wrap;gap:4px 22px;align-items:flex-start;}
+  .qcard-extra .extra-col{flex:0 1 auto;min-width:0;}
+  .qcard-extra .extra-col:has(textarea[style*="block"]), .qcard-extra .extra-col:has(.proof-panel:not([hidden])){flex:1 1 280px;}
+  /* liens repliés « + Commentaire » / « Preuve » */
+  .qcard-extra .check-label{color:var(--blue-dark);font-weight:700;font-size:12.5px;gap:0;}
+  .qcard-extra .check-label input{position:absolute;opacity:0;width:0;height:0;}
+  .qcard-extra .check-label::before{content:"＋ ";}
+  .qcard-extra .check-label:has(input:checked)::before{content:"− ";}
+  .qcard-extra .check-label:has(input:disabled){color:var(--text-light);cursor:default;}
+  .proof-toggle{background:none;border:none;padding:0;font:inherit;font-size:12.5px;font-weight:700;color:var(--blue-dark);cursor:pointer;text-align:left;}
+  .proof-toggle.filled::after{content:" ●";color:var(--green);font-size:10px;vertical-align:1px;}
+  .proof-panel{display:flex;flex-direction:column;gap:5px;margin-top:6px;}
+  .proof-panel[hidden]{display:none;}
   .qmeta{text-align:left;margin-top:8px;}
   /* bandeaux pleine largeur : verrouillée (cadenas orange), sans objet (gris) */
   .locked-note, .excluded-note{display:flex;align-items:center;gap:12px;margin:0;border:none;border-radius:0;
@@ -1654,8 +1666,9 @@ function renderQuestionCard(q, depth){
         <textarea class="txt-comment" rows="2" placeholder="Ajouter un commentaire..." style="display:${st.comment_actif?'block':'none'}">${escapeHtml(st.commentaire)}</textarea>
       </div>
       <div class="extra-col">
+        <button type="button" class="proof-toggle ${(st.preuve_texte || st.preuve_fichier_nom) ? 'filled' : ''}">&#128206; Preuve</button>
+        <div class="proof-panel" ${(st.preuve_texte || st.preuve_fichier_nom) ? '' : 'hidden'}>
         <div class="proof-head">
-          <span class="proof-label">Preuve</span>
           <button type="button" class="file-btn">&#128206; Joindre un fichier</button>
           <input type="file" class="file-preuve" hidden>
           <span class="file-chip ${st.preuve_fichier_nom?'show':''}">
@@ -1666,6 +1679,7 @@ function renderQuestionCard(q, depth){
         <input type="text" class="txt-preuve" placeholder="Référence / description de la preuve..." value="${escapeHtml(st.preuve_texte)}">
         <span class="proof-warning">Documents anonymisés uniquement : aucune donnée patient.</span>
         <span class="upload-status"></span>
+        </div>
       </div>
     </div>
     <div class="qmeta">${escapeHtml(metaText(st))}</div>
@@ -1721,6 +1735,13 @@ function renderQuestionCard(q, depth){
   });
   txtC.addEventListener('input', ()=>{ markAnsweredHere(st); st.commentaire = txtC.value; scheduleSave(q.id); });
 
+  const proofToggle = card.querySelector('.proof-toggle');
+  const proofPanel = card.querySelector('.proof-panel');
+  proofToggle.addEventListener('click', ()=>{
+    proofPanel.hidden = !proofPanel.hidden;
+    proofToggle.classList.toggle('open', !proofPanel.hidden);
+    if(!proofPanel.hidden) card.querySelector('.txt-preuve').focus();
+  });
   const txtP = card.querySelector('.txt-preuve');
   txtP.addEventListener('input', ()=>{ markAnsweredHere(st); st.preuve_texte = txtP.value; scheduleSave(q.id); });
 
