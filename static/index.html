@@ -202,16 +202,26 @@
   h3.subchapter-title{flex-direction:column;align-items:flex-start;gap:0;margin-top:18px;}
   .subchapter-kicker{font-size:11px;font-weight:600;color:var(--fuchsia);text-transform:none;letter-spacing:0;}
 
-  /* questions masquées en attente d'une réponse située ailleurs */
-  .pending-note{background:var(--orange-bg);color:#7a3a00;border-radius:12px;padding:12px 16px;font-size:13px;margin:0 0 16px;display:none;}
-  .pending-note.show{display:block;}
-  .pending-note ul{margin:6px 0 0;padding:0;list-style:none;max-height:260px;overflow:auto;}
-  .pending-note summary{cursor:pointer;}
-  .pending-note li{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:4px 0;border-top:1px solid rgba(194,87,0,.15);}
-  .pending-note li:first-child{border-top:none;}
-  .pending-note .btn{border-color:var(--orange);color:var(--orange);background:#fff;}
-  .pending-note .btn:hover{background:var(--orange);color:#fff;}
   .qcard.flash{box-shadow:0 0 0 3px var(--fuchsia);transition:box-shadow .3s;}
+
+  /* question sans objet (condition non remplie) : grisée et verrouillée */
+  .qcard.excluded, .qpart.excluded{background:#eceff3;}
+  .qcard.excluded .qtext, .qpart.excluded .qtext{font-style:italic;color:var(--text-light);}
+  .qcard.excluded .answers label{opacity:.55;cursor:not-allowed;}
+  .qcard.excluded .qcard-extra{opacity:.55;}
+  .excluded-note{font-size:12.5px;color:var(--gray);background:#fff;border:1px dashed var(--border);
+    border-radius:10px;padding:6px 10px;margin:0 0 10px;}
+
+  /* question déjà renseignée dans un autre chapitre : verrouillée ici */
+  .qcard.locked{background:#eceff3;}
+  .qcard.locked .qtext{font-style:italic;color:var(--text-light);}
+  .qcard.locked .answers label{opacity:.6;cursor:not-allowed;}
+  .qcard.locked .qcard-extra{opacity:.6;}
+  .locked-note{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12.5px;color:var(--gray);
+    background:#fff;border:1px dashed var(--border);border-radius:10px;padding:6px 10px;margin:0 0 10px;}
+  .locked-note .btn{margin-left:auto;}
+  h2.extra-title{font-size:15px;color:var(--fuchsia);margin:30px 0 4px;padding-top:18px;border-top:2px solid var(--border);}
+  h2.extra-title span{display:block;font-size:12px;font-weight:500;color:var(--text-light);margin-top:2px;}
 
   /* sous-questions imbriquées (chapeau + enfants) */
   .qchildren{margin:8px 0 12px 34px;padding-left:14px;border-left:2px solid var(--bg-soft-2);}
@@ -253,13 +263,13 @@
 
   .ref-badge{
     flex:none;position:relative;display:inline-flex;align-items:center;
-    font-size:11px;font-weight:600;color:var(--blue-dark);background:#dde8f5;
-    border:1px solid #b9cee6;
+    font-size:11px;font-weight:700;color:#fff;background:var(--fuchsia);
+    border:1px solid var(--fuchsia);
     padding:2px 9px;border-radius:var(--radius-pill);
     cursor:help;white-space:nowrap;margin-top:1px;user-select:none;
   }
   /* références BPP en style clair : à ne pas confondre avec le numéro de question (bleu plein) */
-  .ref-badge:hover, .ref-badge.open{background:#c9dbf0;border-color:#9dbbe0;}
+  .ref-badge:hover, .ref-badge.open{background:var(--fuchsia-dark);border-color:var(--fuchsia-dark);color:#fff;}
   .ref-badge .ref-tooltip{
     display:none;position:absolute;z-index:50;
     top:24px;left:0;
@@ -645,7 +655,6 @@
               <span class="pct" id="groupPct"></span>
             </div>
           </div>
-          <div class="pending-note" id="pendingNote"></div>
           <div id="groupBody"></div>
           <div class="group-nav">
             <button type="button" class="btn ghost small" id="btnPrevGroup"></button>
@@ -833,8 +842,10 @@ function displayTitle(t){
 function flattenQuestions(q, section, chapterNum, chapterTitle, sub, depth, out, bppChap, parentId){
   if(depth === 0){
     // chapitres BPP du bloc = ceux cités par la question et par toutes ses sous-questions
+    // + chapitre d'origine (thématique où la question est rangée dans le référentiel)
     bppChap = new Set();
     (function collect(n){ refChapters(n).forEach(c=>bppChap.add(c)); (n.children||[]).forEach(collect); })(q);
+    if(THEME_CHAP[chapterNum - 1]) bppChap.add(THEME_CHAP[chapterNum - 1]);
     if(!bppChap.size) bppChap.add('autre');
     ROOT_QUESTIONS.push({node:q, chapterNum, bppChap, section, sub, order: ROOT_QUESTIONS.length});
   }
@@ -842,7 +853,7 @@ function flattenQuestions(q, section, chapterNum, chapterTitle, sub, depth, out,
     sectionId: section.id, sectionTitle: section.title,
     chapterNum, chapterTitle,
     subId: sub ? sub.id : null, subTitle: sub ? sub.title : null,
-    depth, bppChap,
+    depth, bppChap, homeChap: THEME_CHAP[chapterNum - 1] || [...bppChap][0],
     parentQuestionId: parentId || null, // l'API imbrique les sous-questions sans renvoyer ce lien
   });
   // question qui complète une ligne « PART » : on garde l'amorce pour les vues à plat (analyse, export)
@@ -857,41 +868,62 @@ function flattenSection(section, chapterNum, chapterTitle, sub, out){
   section.questions.forEach(q=>flattenQuestions(q, section, chapterNum, chapterTitle, sub, 0, out));
   section.sections.forEach(s=>flattenSection(s, chapterNum, chapterTitle, sub || {id:s.id, title:s.title}, out));
 }
+/* Chapitre BPP correspondant à chaque thématique (1re niveau du référentiel) : même intitulé,
+   ou « LDx » dans le titre. Les deux modes de parcours partagent ainsi la même notion de chapitre. */
+let THEME_CHAP = [];
+function normTitle(t){ return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
+function themeChapter(title){
+  const ld = /\bLD\s*(\d)\b/i.exec(title);
+  if(ld) return 'LD' + ld[1];
+  const c = BPP_CHAPTERS.find(c=>normTitle(c.title) === normTitle(title));
+  return c ? c.key : null;
+}
+function chapterTitleOf(key){
+  const c = BPP_CHAPTERS.find(c=>c.key === key);
+  if(!c) return key === 'autre' ? 'Sans référence BPP' : key;
+  return /^\d+$/.test(key) ? key + '. ' + c.title : c.title;
+}
 function buildAllQuestions(){
   ALL_QUESTIONS = [];
   QUESTION_BY_ID = {};
   ROOT_QUESTIONS = [];
+  THEME_CHAP = SECTIONS.map(ch=>themeChapter(ch.title));
   SECTIONS.forEach((ch, i)=>flattenSection(ch, i+1, ch.title, null, ALL_QUESTIONS));
   ALL_QUESTIONS.forEach(q=>{ q.isBase = isBaseQuestion(q); });
 }
 
-/* Une question conditionnelle n'est affichée que si la question dont elle dépend a reçu
-   la réponse attendue (condition « oui » : « oui » ou « partiellement conforme ») ; elle
-   est masquée tant que cette question est sans réponse, ou si la réponse est « non » / « NA ».
-   Sa question de dépendance et sa question chapeau (le cas échéant) doivent elles-mêmes
-   être visibles. */
+/* Questions conditionnelles : jamais masquées. Tant que la question dont elle dépend est sans
+   réponse, la question reste ouverte. Si cette question a reçu une réponse qui ne remplit pas la
+   condition (condition « oui » : « oui » ou « partiellement »), la question est « sans objet » :
+   grisée, verrouillée, avec la mention de la réponse en cause, et exclue de la progression, de
+   l'analyse et des exports. Même règle si sa question de dépendance ou sa question chapeau est
+   elle-même sans objet. */
 function dependencyMet(reponse, expected){
   return reponse === expected || (expected === 'oui' && reponse === 'partiel');
 }
-function isVisible(q, seen){
-  // garde-fou contre les dépendances circulaires du référentiel (ex. Q211 dépend d'elle-même)
+function exclusionOf(q, seen){
+  // garde-fou contre les dépendances circulaires du référentiel
   seen = seen || new Set();
-  if(seen.has(q.id)) return true;
+  if(seen.has(q.id)) return null;
   seen.add(q.id);
   if(q.dependsOnQuestionId && q.dependsOnQuestionId !== q.id){
     const dep = QUESTION_BY_ID[q.dependsOnQuestionId];
     if(dep){
-      // une ligne « PART » n'a pas de réponse : la dépendance porte seulement sur son affichage
-      if(!dep.isPart && !dependencyMet((qState(dep.id) || {}).reponse, q.dependsOnValue)) return false;
-      if(!isVisible(dep, seen)) return false;
+      // une ligne « PART » n'a pas de réponse : seule compte sa propre situation
+      const r = dep.isPart ? null : (qState(dep.id) || {}).reponse;
+      if(r && !dependencyMet(r, q.dependsOnValue)) return {dep, reponse: r};
+      const e = exclusionOf(dep, seen);
+      if(e) return e;
     }
   }
   if(q.parentQuestionId){
     const parent = QUESTION_BY_ID[q.parentQuestionId];
-    if(parent && !isVisible(parent, seen)) return false;
+    const e = parent && exclusionOf(parent, seen);
+    if(e) return e;
   }
-  return true;
+  return null;
 }
+function isVisible(q){ return !exclusionOf(q); }
 /* Questions affichées et à renseigner : les lignes « PART » (partie initiale commune à
    plusieurs questions, sans réponse) sont exclues de la progression, de l'analyse et des exports. */
 function visibleQuestions(){ return ALL_QUESTIONS.filter(q=>!q.isPart && isVisible(q)); }
@@ -1204,6 +1236,7 @@ async function persist(qid, evalId){
     preuve_texte: st.preuve_texte, criticite: st.criticite,
     risque_maitrise: st.risque_maitrise, action: st.action,
     base_version: st.version || 0,
+    answered_in: st.answered_in || null,
   };
   try{
     const res = await apiFetch(`/evaluations/${evalId}/responses/${qid}`, {
@@ -1284,8 +1317,8 @@ let QITEM_EL = {}; // question_id -> élément conteneur (carte + sous-questions
 function auditGroups(){
   if(auditMode === 'theme'){
     return SECTIONS.map((ch, i)=>({
-      key: 't' + ch.id, kicker: 'Thématique', title: displayTitle(ch.title),
-      match: q=>q.chapterNum === i+1, section: ch,
+      key: 't' + ch.id, kicker: 'Thématique', title: displayTitle(ch.title), chap: THEME_CHAP[i],
+      match: q=>q.chapterNum === i+1 || (!!THEME_CHAP[i] && q.bppChap.has(THEME_CHAP[i])), section: ch, themeNum: i+1,
     }));
   }
   const chapters = BPP_CHAPTERS.slice();
@@ -1293,7 +1326,7 @@ function auditGroups(){
   return chapters
     .filter(c=>ROOT_QUESTIONS.some(r=>r.bppChap.has(c.key)))
     .map(c=>({
-      key: 'c' + c.key, bppChap: c.key,
+      key: 'c' + c.key, bppChap: c.key, chap: c.key,
       kicker: c.key === 'autre' ? 'Chapitre BPP' : (c.key.startsWith('LD') ? 'Ligne directrice ' + c.key : 'Chapitre BPP ' + c.key),
       title: c.title, sideTitle: /^\d+$/.test(c.key) ? c.key + '. ' + c.title : c.title,
       match: q=>q.bppChap.has(c.key),
@@ -1334,10 +1367,27 @@ function renderQuestionnaire(){
 
   if(group.section){
     renderSectionBody(group.section, body, 1);
+    // questions qui concernent aussi ce chapitre mais sont rangées dans une autre thématique
+    const extra = group.chap ? ROOT_QUESTIONS.filter(r=>r.chapterNum !== group.themeNum && r.bppChap.has(group.chap)) : [];
+    if(extra.length){
+      const h = document.createElement('h2');
+      h.className = 'extra-title';
+      h.innerHTML = `Questions posées dans d'autres thématiques et concernant aussi ce chapitre
+        <span>${extra.length} question${extra.length>1?'s':''} · une question déjà renseignée est verrouillée ici et se modifie là où elle a été répondue</span>`;
+      body.appendChild(h);
+      renderRootList(extra, body);
+    }
   } else {
-    // Par chapitre BPP : toutes les questions citant ce chapitre, dans l'ordre du référentiel,
-    // avec l'intertitre (thématique · sous-chapitre) à chaque changement de section
-    const roots = ROOT_QUESTIONS.filter(r=>r.bppChap.has(group.bppChap)).sort((x, y)=>x.order - y.order);
+    // Par chapitre BPP : toutes les questions concernant ce chapitre, dans l'ordre du référentiel
+    renderRootList(ROOT_QUESTIONS.filter(r=>r.bppChap.has(group.bppChap)), body);
+  }
+  renderGroupNav(groups, group);
+}
+
+/* Liste de blocs (question + sous-questions) dans l'ordre du référentiel, avec l'intertitre
+   (thématique · sous-chapitre) à chaque changement de section */
+function renderRootList(roots, body){
+    roots = roots.slice().sort((x, y)=>x.order - y.order);
     let scDiv = null, lastSection = null;
     roots.forEach(r=>{
       if(r.section.id !== lastSection){
@@ -1355,8 +1405,9 @@ function renderQuestionnaire(){
       }
       scDiv.appendChild(buildQuestionItem(r.node, 0));
     });
-  }
+}
 
+function renderGroupNav(groups, group){
   const idx = groups.indexOf(group);
   const prev = groups[idx-1], next = groups[idx+1];
   const btnPrev = document.getElementById('btnPrevGroup');
@@ -1371,7 +1422,6 @@ function renderQuestionnaire(){
 
 function selectGroup(key){
   currentGroupKey[auditMode] = key;
-  document.getElementById('pendingNote').innerHTML = '';
   saveNavPrefs();
   renderQuestionnaire();
   refreshVisibility();
@@ -1446,9 +1496,35 @@ function buildQuestionItem(q, depth){
 
 function refreshVisibility(){
   ALL_QUESTIONS.forEach(q=>{
-    const el = QITEM_EL[q.id];
-    if(el) el.style.display = isVisible(q) ? '' : 'none';
+    if(!QITEM_EL[q.id]) return;
+    const card = document.getElementById('q-' + q.id);
+    if(card) applyExclusion(card, q);
   });
+}
+
+/* Grise et verrouille une question « sans objet », avec la réponse en cause ; la rouvre sinon */
+function applyExclusion(card, q){
+  const ex = exclusionOf(QUESTION_BY_ID[q.id] || q);
+  card.classList.toggle('excluded', !!ex);
+  let note = card.querySelector('.excluded-note');
+  if(ex){
+    if(!note){
+      note = document.createElement('div');
+      note.className = 'excluded-note';
+      card.insertBefore(note, card.firstChild);
+    }
+    note.innerHTML = `&#8856; Sans objet : <strong>${escapeHtml(ex.dep.code)}</strong> a été répondue
+      « ${escapeHtml(RESPONSE_LABELS[ex.reponse] || ex.reponse)} »`;
+  } else if(note){
+    note.remove();
+  }
+  if(card.classList.contains('qcard')){
+    const st = qState(q.id) || {};
+    const disabled = isReadOnly() || card.classList.contains('locked') || !!ex;
+    card.querySelectorAll('.answers input, .qcard-extra input, .qcard-extra textarea, .qcard-extra button').forEach(el=>{ el.disabled = disabled; });
+    const rm = card.querySelector('.rm');
+    if(rm) rm.style.display = disabled ? 'none' : '';
+  }
 }
 
 /* Une bulle par référence BPP, chacune avec son propre texte : l'extrait stocké sur la
@@ -1481,6 +1557,24 @@ function renderPartCard(q, depth){
     </div>
   `;
   return card;
+}
+
+/* Une question qui concerne plusieurs chapitres y est présentée partout ; elle se renseigne
+   une fois : le chapitre de la 1re saisie est mémorisé (answered_in) et, une fois répondue,
+   la question est verrouillée dans les autres chapitres. Réponses antérieures : chapitre
+   d'origine de la question dans le référentiel. */
+function currentChap(){ const g = currentGroup(); return g ? g.chap : null; }
+function answeredWhere(q, st){
+  q = QUESTION_BY_ID[q.id] || q; // les cartes sont construites depuis l'arbre : chapitres sur la version à plat
+  const w = st.answered_in;
+  return (w && q.bppChap.has(w)) ? w : q.homeChap;
+}
+function isLockedHere(q, st){
+  const here = currentChap();
+  return !!(st && st.reponse && here && answeredWhere(q, st) !== here);
+}
+function markAnsweredHere(st){
+  if(!st.answered_in && !st.reponse && currentChap()) st.answered_in = currentChap();
 }
 
 function renderQuestionCard(q, depth){
@@ -1536,10 +1630,22 @@ function renderQuestionCard(q, depth){
   if(isReadOnly()){
     card.querySelectorAll('input, textarea, button').forEach(el=>{ el.disabled = true; });
     card.querySelector('.rm').style.display = 'none';
+  } else if(isLockedHere(q, st)){
+    const where = answeredWhere(q, st);
+    card.classList.add('locked');
+    card.querySelectorAll('input, textarea, button').forEach(el=>{ el.disabled = true; });
+    card.querySelector('.rm').style.display = 'none';
+    const note = document.createElement('div');
+    note.className = 'locked-note';
+    note.innerHTML = `<span>&#128274; Déjà répondu dans le chapitre <strong>${escapeHtml(chapterTitleOf(where))}</strong></span>
+      <button type="button" class="btn small ghost">Modifier dans ce chapitre</button>`;
+    note.querySelector('button').addEventListener('click', ()=>goToQuestion(q.id, where));
+    card.insertBefore(note, card.firstChild);
   }
 
   card.querySelectorAll('input[type=radio]').forEach(r=>{
     r.addEventListener('change', ()=>{
+      markAnsweredHere(st);
       st.reponse = r.value;
       card.classList.add('answered');
       card.dataset.reponse = r.value;
@@ -1552,15 +1658,16 @@ function renderQuestionCard(q, depth){
   const chk = card.querySelector('.chk-comment');
   const txtC = card.querySelector('.txt-comment');
   chk.addEventListener('change', ()=>{
+    markAnsweredHere(st);
     st.comment_actif = chk.checked;
     txtC.style.display = chk.checked ? 'block' : 'none';
     if(chk.checked) txtC.focus();
     scheduleSave(q.id);
   });
-  txtC.addEventListener('input', ()=>{ st.commentaire = txtC.value; scheduleSave(q.id); });
+  txtC.addEventListener('input', ()=>{ markAnsweredHere(st); st.commentaire = txtC.value; scheduleSave(q.id); });
 
   const txtP = card.querySelector('.txt-preuve');
-  txtP.addEventListener('input', ()=>{ st.preuve_texte = txtP.value; scheduleSave(q.id); });
+  txtP.addEventListener('input', ()=>{ markAnsweredHere(st); st.preuve_texte = txtP.value; scheduleSave(q.id); });
 
   const fileInput = card.querySelector('.file-preuve');
   const fileBtn = card.querySelector('.file-btn');
@@ -1613,63 +1720,12 @@ document.addEventListener('click', (e)=>{
 });
 
 /* ======================= PROGRESS ======================= */
-/* Question (affichée, sans réponse) dont dépend l'affichage d'une question masquée */
-function blockerOf(q, seen){
-  seen = seen || new Set();
-  if(seen.has(q.id)) return null;
-  seen.add(q.id);
-  if(q.dependsOnQuestionId && q.dependsOnQuestionId !== q.id){
-    const dep = QUESTION_BY_ID[q.dependsOnQuestionId];
-    if(dep){
-      if(!isVisible(dep)) return blockerOf(dep, seen);
-      if(!dep.isPart && !dependencyMet((qState(dep.id) || {}).reponse, q.dependsOnValue))
-        return (qState(dep.id) || {}).reponse ? null : dep; // répondue « non » / « NA » : masquage voulu
-    }
-  }
-  if(q.parentQuestionId){
-    const parent = QUESTION_BY_ID[q.parentQuestionId];
-    if(parent && !isVisible(parent)) return blockerOf(parent, seen);
-  }
-  return null;
-}
-
-/* Bandeau : questions du groupe affiché masquées en attendant la réponse à une question
-   « déclencheuse », située dans ce groupe ou ailleurs (ex. tout le chapitre 4 dépend de Q006,
-   Q185 à Q200 dépendent de Q068). Chaque déclencheuse a un bouton pour y aller. */
-function renderPendingNote(){
-  const note = document.getElementById('pendingNote');
-  const groups = auditGroups();
-  const group = currentGroup(groups);
-  if(!note || !group || !EVALUATION_ID){ if(note) note.className = 'pending-note'; return; }
-  const counts = new Map();
-  ALL_QUESTIONS.forEach(q=>{
-    if(q.isPart || !group.match(q) || isVisible(q)) return;
-    const b = blockerOf(q);
-    if(b) counts.set(b, (counts.get(b) || 0) + 1);
-  });
-  if(!counts.size){ note.className = 'pending-note'; note.innerHTML = ''; return; }
-  const total = [...counts.values()].reduce((a, n)=>a + n, 0);
-  // déplié d'office si une question déclencheuse est hors de la rubrique (sinon on ne la verrait pas)
-  const outside = [...counts.keys()].some(b=>!group.match(b));
-  const wasOpen = note.querySelector('details') ? note.querySelector('details').open : null;
-  note.innerHTML = `<details ${(wasOpen === null ? outside : wasOpen) ? 'open' : ''}><summary><strong>${total} question${total>1?'s':''} de cette rubrique ${total>1?'sont masquées':'est masquée'}</strong> :
-    ${total>1?'elles s\'afficheront':'elle s\'affichera'} selon votre réponse ${counts.size>1?'aux ' + counts.size + ' questions suivantes':'à la question suivante'}.</summary>
-    <ul>${[...counts.entries()].map(([b, n])=>`<li><span><strong>${escapeHtml(b.code)}</strong> — ${escapeHtml(fullQuestionText(b))}
-      <span class="muted">(${n} question${n>1?'s':''} en attente${group.match(b) ? '' : ' · ' + escapeHtml(groupLabelOf(b))})</span></span>
-      <button type="button" class="btn small" data-goto="${escapeHtml(b.id)}">Répondre</button></li>`).join('')}</ul></details>`;
-  note.className = 'pending-note show';
-  note.querySelectorAll('[data-goto]').forEach(btn=>btn.addEventListener('click', ()=>goToQuestion(btn.dataset.goto)));
-}
-
-function groupLabelOf(q){
-  const g = auditGroups().find(x=>x.match(q));
-  return g ? (g.sideTitle || g.title) : '';
-}
-function goToQuestion(qid){
+function goToQuestion(qid, chap){
   const q = QUESTION_BY_ID[qid];
   const groups = auditGroups();
   const current = currentGroup(groups);
-  const target = q && (current && current.match(q) ? current : groups.find(g=>g.match(q)));
+  const target = q && ((chap && groups.find(g=>g.chap === chap && g.match(q)))
+    || (current && current.match(q) ? current : groups.find(g=>g.match(q))));
   if(!target) return;
   if(!current || target.key !== current.key) selectGroup(target.key);
   setTimeout(()=>{
@@ -1682,7 +1738,6 @@ function goToQuestion(qid){
 }
 
 function updateProgress(){
-  renderPendingNote();
   const visible = visibleQuestions();
   const all = countLabel(visible);
   document.getElementById('progressFill').style.width = all.pct + '%';
