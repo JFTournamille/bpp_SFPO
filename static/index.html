@@ -129,6 +129,7 @@
 
   /* ===== Mode d'audit (thématique / chapitre BPP) ===== */
   .mode-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;}
+  .group-empty{background:#fff;border:1.5px dashed var(--border);border-radius:12px;padding:16px 18px;color:var(--text-light);font-size:13.5px;}
   .show-all{display:inline-flex;align-items:center;gap:7px;margin-left:auto;font-size:12.5px;font-weight:600;color:var(--text);cursor:pointer;}
   .show-all input{width:16px;height:16px;accent-color:var(--fuchsia);}
   .mode-row .label{font-size:13px;font-weight:600;color:var(--text);}
@@ -1406,6 +1407,7 @@ function renderQuestionnaire(){
     if(extra.length){
       const h = document.createElement('h2');
       h.className = 'extra-title';
+      h.dataset.level = 1;
       h.innerHTML = `Questions posées dans d'autres thématiques et concernant aussi ce chapitre
         <span>${extra.length} question${extra.length>1?'s':''} · une question déjà renseignée est verrouillée ici et se modifie là où elle a été répondue</span>`;
       body.appendChild(h);
@@ -1428,6 +1430,7 @@ function renderRootList(roots, body){
         lastSection = r.section.id;
         const h = document.createElement('h3');
         h.className = 'subchapter-title';
+        h.dataset.level = 2;
         const chapter = SECTIONS[r.chapterNum - 1];
         const path = [displayTitle(chapter.title)];
         if(r.section.id !== chapter.id) path.push(displayTitle(r.section.title));
@@ -1530,6 +1533,7 @@ function renderSectionBody(section, container, level){
   if(level > 1){
     const h = document.createElement('h3');
     h.className = 'subchapter-title';
+    h.dataset.level = level;
     h.style.marginLeft = ((level-2) * 16) + 'px';
     h.textContent = section.title;
     container.appendChild(h);
@@ -1585,6 +1589,43 @@ function refreshVisibility(){
     const card = document.getElementById('q-' + q.id);
     if(card) applyExclusion(card, q);
   });
+  refreshHeadings();
+}
+
+/* Un intertitre n'est affiché que s'il est suivi d'au moins une question visible avant le
+   prochain titre de même niveau ou de niveau supérieur (sous-chapitres dont toutes les
+   questions sont conditionnelles et masquées). */
+function refreshHeadings(){
+  const body = document.getElementById('groupBody');
+  if(!body) return;
+  const kids = [...body.children];
+  const hasVisible = el => [...el.children].some(c=>c.classList.contains('qitem') && c.style.display !== 'none');
+  let any = false;
+  kids.forEach((el, i)=>{
+    if(!el.dataset.level){ if(hasVisible(el)) any = true; return; }
+    const lvl = +el.dataset.level;
+    let vis = false;
+    for(let j = i + 1; j < kids.length; j++){
+      const k = kids[j];
+      if(k.dataset.level && +k.dataset.level <= lvl) break;
+      if(!k.dataset.level && hasVisible(k)){ vis = true; break; }
+    }
+    el.style.display = vis ? '' : 'none';
+  });
+  let empty = document.getElementById('groupEmpty');
+  if(!any){
+    if(!empty){
+      empty = document.createElement('p');
+      empty.id = 'groupEmpty';
+      empty.className = 'group-empty';
+      empty.textContent = "Les questions de cette rubrique dépendent de réponses données ailleurs : elles apparaîtront "
+        + "quand les questions dont elles dépendent auront reçu « Oui » ou « Partiellement ». "
+        + "Cochez « Afficher toutes les questions » pour les voir dès maintenant.";
+      body.appendChild(empty);
+    }
+  } else if(empty){
+    empty.remove();
+  }
 }
 
 /* Grise et verrouille une question « sans objet », avec la réponse en cause ; la rouvre sinon */
