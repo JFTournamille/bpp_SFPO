@@ -2452,11 +2452,25 @@ function renderDashboard(){
         ${e.centre_id ? '' : `<button class="btn small ghost" data-attach="${e.id}">Rattacher</button>`}
         <button class="btn small" data-open="${e.id}">Ouvrir</button>
         <button class="btn small ghost" data-open-member="${e.id}" title="Ouvrir en simulant la vue d'un membre">Vue membre</button>
+        ${e.answered ? '' : `<button class="btn small ghost" data-demo="${e.id}" title="Remplir ce questionnaire vierge avec des données fictives pour une démonstration">Remplir (démo)</button>`}
       </td>
     </tr>`;
   }).join('');
   tbody.querySelectorAll('[data-open]').forEach(b=>b.addEventListener('click', ()=>openFromDashboard(+b.dataset.open, 'expert')));
   tbody.querySelectorAll('[data-open-member]').forEach(b=>b.addEventListener('click', ()=>openFromDashboard(+b.dataset.openMember, 'membre')));
+  tbody.querySelectorAll('[data-demo]').forEach(b=>b.addEventListener('click', async ()=>{
+    const ev = DASH.evaluations.find(x=>x.id === +b.dataset.demo);
+    if(!confirm(`Remplir le questionnaire « ${ev && ev.centre_libelle || 'sans centre'} » avec des données FICTIVES de démonstration `
+      + `(réponses, commentaires, preuves et pièces jointes, criticités, actions) ?\n\nÀ réserver à un questionnaire de démonstration : `
+      + `le bouton « Réinitialiser » du questionnaire permet ensuite de tout effacer.`)) return;
+    b.disabled = true; b.textContent = 'Remplissage…';
+    try{
+      const r = await apiFetch(`/admin/evaluations/${b.dataset.demo}/demo`, {method:'POST'});
+      alert(`Questionnaire rempli : ${r.reponses} réponses (${r.oui} oui, ${r.partiel} partiel, ${r.non} non, ${r.na} NA), `
+        + `${r.commentaires} commentaires, ${r.preuves} preuves dont ${r.fichiers} pièces jointes, ${r.criticites} criticités, ${r.actions} actions.`);
+    }catch(err){ alert(err.message); }
+    loadDashboard();
+  }));
   tbody.querySelectorAll('[data-attach]').forEach(b=>b.addEventListener('click', ()=>attachEvaluation(+b.dataset.attach)));
 }
 document.getElementById('evalSearch').addEventListener('input', ()=>DASH && renderDashboard());

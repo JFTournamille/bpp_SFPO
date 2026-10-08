@@ -83,6 +83,21 @@ def create_evaluation(body: EvaluationCreate):
     return fetch_one("SELECT id FROM evaluations WHERE centre_id = %s ORDER BY id DESC LIMIT 1", (body.centre_id,))
 
 
+@router.post("/evaluations/{evaluation_id}/demo")
+def demo_fill(evaluation_id: int, me: dict = Depends(require_expert)):
+    """Remplit un questionnaire VIERGE avec des données de démonstration (réponses, commentaires,
+    preuves avec pièces jointes PDF, expertise). Refusé si le questionnaire contient déjà des réponses."""
+    from app import demo
+    ev = fetch_one("SELECT e.id, e.status, c.libelle FROM evaluations e LEFT JOIN centres c ON c.id = e.centre_id "
+                   "WHERE e.id = %s", (evaluation_id,))
+    if not ev:
+        raise HTTPException(status_code=404, detail="Évaluation introuvable")
+    if fetch_one("SELECT 1 AS x FROM responses WHERE evaluation_id = %s LIMIT 1", (evaluation_id,)):
+        raise HTTPException(status_code=409, detail="Ce questionnaire contient déjà des réponses : démonstration réservée à un questionnaire vierge")
+    upload_dir = os.environ.get("UPLOAD_DIR", "/app/uploads")
+    return demo.fill(evaluation_id, me["id"], ev["libelle"] or "", upload_dir)
+
+
 @router.patch("/evaluations/{evaluation_id}")
 def update_evaluation(evaluation_id: int, body: EvaluationUpdate):
     if not fetch_one("SELECT id FROM evaluations WHERE id = %s", (evaluation_id,)):
