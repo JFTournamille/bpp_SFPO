@@ -516,9 +516,62 @@
   .mail-status{border-radius:10px;padding:10px 14px;font-size:13px;margin:0 0 12px;}
   .mail-status.ok{background:var(--green-bg);color:var(--green);}
   .mail-status.ko{background:var(--orange-bg);color:var(--orange);}
+
+  /* ===== Carte question — design « signalétique » ===== */
+  .qcard, .qpart{background:#fff;border:1.5px solid #aeb9c5;border-radius:12px;padding:0;overflow:hidden;
+    box-shadow:0 2px 6px rgba(15,25,40,.08);margin-bottom:10px;}
+  .qcard[data-reponse]{border-left-width:6px;}
+  .qrow{display:grid;grid-template-columns:auto 1fr auto;gap:0 16px;padding:14px 16px;align-items:start;}
+  .qid-badge{background:var(--blue-darker);color:#fff;font-weight:800;font-size:12.5px;letter-spacing:.03em;
+    border-radius:7px;padding:6px 10px;min-width:62px;text-align:center;}
+  .qpart .qid-badge{background:var(--gray);}
+  .qtext{font-size:15px;font-weight:600;line-height:1.42;color:#141a20;}
+  .qcard.sub .qtext{font-size:14px;}
+  .ref-badges{margin-top:6px;}
+  .ref-badge{border-radius:5px;padding:1px 7px;}
+  .answers{display:flex;gap:6px;margin:0;flex-wrap:nowrap;}
+  .answers label{width:64px;min-width:0;height:52px;padding:0;border-radius:10px;border:2px solid #c3cad1;background:#fff;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.02em;cursor:pointer;transition:all .12s;}
+  .answers label svg{width:21px;height:21px;}
+  .answers label.opt-oui{color:var(--green);} .answers label.opt-non{color:var(--red);}
+  .answers label.opt-partiel{color:var(--orange);} .answers label.opt-na{color:var(--gray);}
+  .answers label:hover{border-color:currentColor;color:inherit;transform:translateY(-1px);}
+  .answers label.opt-oui:hover{color:var(--green);} .answers label.opt-non:hover{color:var(--red);}
+  .answers label.opt-partiel:hover{color:var(--orange);} .answers label.opt-na:hover{color:var(--gray);}
+  .answers input:checked + label{color:#fff;border-color:transparent;}
+  .qcard-extra{margin-top:10px;padding-top:10px;border-top:1px dashed #d5dbe1;}
+  .qmeta{text-align:left;margin-top:8px;}
+  /* bandeaux pleine largeur : verrouillée (cadenas orange), sans objet (gris) */
+  .locked-note, .excluded-note{display:flex;align-items:center;gap:12px;margin:0;border:none;border-radius:0;
+    background:#26313c;color:#fff;font-size:13px;padding:7px 14px 7px 7px;}
+  .locked-note strong, .excluded-note strong{color:#fff;}
+  .bar-ic{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex:none;background:#e07800;color:#fff;}
+  .bar-ic svg{width:17px;height:17px;}
+  .excluded-note{background:#4a545e;} .excluded-note .bar-ic{background:#7c868f;}
+  .bar-link{margin-left:auto;background:none;border:none;color:#ffb35c;font:inherit;font-weight:700;cursor:pointer;white-space:nowrap;}
+  .bar-link:hover{text-decoration:underline;}
+  .qcard.locked, .qcard.excluded, .qpart.excluded{background:#fff;}
+  .qcard.locked .qrow, .qcard.excluded .qrow, .qpart.excluded .qrow{background:#f2f4f7;}
+  .qcard.locked .qid-badge, .qcard.excluded .qid-badge{background:#6b7680;}
+  .qcard.locked .qtext, .qcard.excluded .qtext{color:#5d6670;font-style:italic;}
+  .qcard.locked .answers, .qcard.excluded .answers{opacity:.75;}
+  .qcard.locked .answers label, .qcard.excluded .answers label{opacity:1;cursor:not-allowed;transform:none;}
+  @media (max-width: 900px){
+    .qrow{grid-template-columns:auto 1fr;}
+    .answers{grid-column:1/3;margin-top:12px;}
+    .answers label{flex:1;width:auto;}
+  }
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="ic-oui" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="ic-partiel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 6.5a5.5 5.5 0 0 1 0 11z" fill="currentColor"/></symbol>
+  <symbol id="ic-non" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.59 16.73A2 2 0 0 1 2 15.31V8.69a2 2 0 0 1 .59-1.42l4.68-4.68A2 2 0 0 1 8.69 2h6.62a2 2 0 0 1 1.42.59l4.68 4.68A2 2 0 0 1 22 8.69v6.62a2 2 0 0 1-.59 1.42l-4.68 4.68a2 2 0 0 1-1.42.59H8.69a2 2 0 0 1-1.42-.59z"/><path d="m15 9-6 6M9 9l6 6"/></symbol>
+  <symbol id="ic-na" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="m5.3 5.3 13.4 13.4"/></symbol>
+  <symbol id="ic-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></symbol>
+</svg>
 
 <header class="site">
   <div class="wrap header-inner">
@@ -766,6 +819,7 @@
 const API = '/api';
 const RGPD_REQUIRED = 'Acquittement de la mention RGPD requis';
 const RESPONSE_LABELS = {oui:'Oui', non:'Non', partiel:'Partiellement', na:'Non applicable'};
+const ANSWER_SHORT = {oui:'Oui', partiel:'Partiel', non:'Non', na:'N/A'};
 const RESPONSE_POINTS = {oui:1, non:0, partiel:0.5};
 
 let SECTIONS = [];
@@ -1513,8 +1567,8 @@ function applyExclusion(card, q){
       note.className = 'excluded-note';
       card.insertBefore(note, card.firstChild);
     }
-    note.innerHTML = `&#8856; Sans objet : <strong>${escapeHtml(ex.dep.code)}</strong> a été répondue
-      « ${escapeHtml(RESPONSE_LABELS[ex.reponse] || ex.reponse)} »`;
+    note.innerHTML = `<span class="bar-ic"><svg><use href="#ic-na"/></svg></span>
+      <span>Sans objet : <strong>${escapeHtml(ex.dep.code)}</strong> a été répondue « ${escapeHtml(RESPONSE_LABELS[ex.reponse] || ex.reponse)} »</span>`;
   } else if(note){
     note.remove();
   }
@@ -1548,7 +1602,7 @@ function renderPartCard(q, depth){
   card.dataset.qid = q.id;
   const refs = (q.refs && q.refs.length) ? q.refs : (q.ref ? [q.ref] : []);
   card.innerHTML = `
-    <div class="qcard-top">
+    <div class="qrow">
       <span class="qid-badge">${escapeHtml(q.code)}</span>
       <div class="qmain">
         <div class="qtext">${depth>0?'<span class="sub-arrow">&#8627;</span>':''}${escapeHtml(q.question)} <span class="qpart-ellipsis">…</span></div>
@@ -1589,19 +1643,11 @@ function renderQuestionCard(q, depth){
   const refBadges = refBadgesHtml(q, refs);
 
   card.innerHTML = `
-    <div class="qcard-top">
-      <span class="qid-badge">${escapeHtml(q.code)}</span>
-      <div class="qmain">
-        <div class="qtext">${depth>0?'<span class="sub-arrow">&#8627;</span>':''}${escapeHtml(q.question)}</div>
-        <span class="ref-badges">${refBadges}</span>
-      </div>
-    </div>
-    <div class="answers">
-      ${['oui','non','partiel','na'].map(v=>`
-        <input type="radio" name="rep-${q.id}" id="rep-${q.id}-${v}" value="${v}" ${st.reponse===v?'checked':''}>
-        <label class="opt-${v}" for="rep-${q.id}-${v}">${RESPONSE_LABELS[v]}</label>
-      `).join('')}
-    </div>
+    <div class="qrow">
+    <span class="qid-badge">${escapeHtml(q.code)}</span>
+    <div class="qmain">
+      <div class="qtext">${depth>0?'<span class="sub-arrow">&#8627;</span>':''}${escapeHtml(q.question)}</div>
+      <span class="ref-badges">${refBadges}</span>
     <div class="qcard-extra">
       <div class="extra-col">
         <label class="check-label"><input type="checkbox" class="chk-comment" ${st.comment_actif?'checked':''}> Commentaire</label>
@@ -1623,6 +1669,14 @@ function renderQuestionCard(q, depth){
       </div>
     </div>
     <div class="qmeta">${escapeHtml(metaText(st))}</div>
+    </div>
+    <div class="answers">
+      ${['oui','partiel','non','na'].map(v=>`
+        <input type="radio" name="rep-${q.id}" id="rep-${q.id}-${v}" value="${v}" ${st.reponse===v?'checked':''}>
+        <label class="opt-${v}" for="rep-${q.id}-${v}" title="${RESPONSE_LABELS[v]}"><svg><use href="#ic-${v}"/></svg>${ANSWER_SHORT[v]}</label>
+      `).join('')}
+    </div>
+    </div>
   `;
   card.addEventListener('focusin', ()=>card.classList.remove('conflict'));
 
@@ -1637,8 +1691,9 @@ function renderQuestionCard(q, depth){
     card.querySelector('.rm').style.display = 'none';
     const note = document.createElement('div');
     note.className = 'locked-note';
-    note.innerHTML = `<span>&#128274; Déjà répondu dans le chapitre <strong>${escapeHtml(chapterTitleOf(where))}</strong></span>
-      <button type="button" class="btn small ghost">Modifier dans ce chapitre</button>`;
+    note.innerHTML = `<span class="bar-ic"><svg><use href="#ic-lock"/></svg></span>
+      <span>Déjà répondu dans le chapitre <strong>${escapeHtml(chapterTitleOf(where))}</strong></span>
+      <button type="button" class="bar-link">Modifier dans ce chapitre →</button>`;
     note.querySelector('button').addEventListener('click', ()=>goToQuestion(q.id, where));
     card.insertBefore(note, card.firstChild);
   }
