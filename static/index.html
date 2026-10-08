@@ -129,6 +129,8 @@
 
   /* ===== Mode d'audit (thématique / chapitre BPP) ===== */
   .mode-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;}
+  .show-all{display:inline-flex;align-items:center;gap:7px;margin-left:auto;font-size:12.5px;font-weight:600;color:var(--text);cursor:pointer;}
+  .show-all input{width:16px;height:16px;accent-color:var(--fuchsia);}
   .mode-row .label{font-size:13px;font-weight:600;color:var(--text);}
   .mode-switch{display:flex;background:var(--bg-soft-2);border-radius:var(--radius-pill);padding:3px;gap:2px;}
   .mode-switch button{
@@ -570,6 +572,9 @@
         <button type="button" class="mode-btn active" data-mode="theme">Par thématique</button>
         <button type="button" class="mode-btn" data-mode="chapter">Par chapitre BPP</button>
       </div>
+      <label class="show-all" title="Par défaut, une question conditionnelle n'apparaît que lorsque la question dont elle dépend a reçu « Oui » ou « Partiellement »">
+        <input type="checkbox" id="showAllCond"> Afficher toutes les questions (y compris conditionnelles)
+      </label>
     </div>
     <div class="progress-row">
       <span class="label">Progression globale</span>
@@ -923,7 +928,31 @@ function exclusionOf(q, seen){
   }
   return null;
 }
-function isVisible(q){ return !exclusionOf(q); }
+/* Condition remplie : toutes les questions dont dépend la question (et ses questions chapeau)
+   ont reçu la réponse attendue. Une question en attente (déclencheuse sans réponse) ou sans objet
+   n'est pas comptée ; elle n'est affichée que si « Afficher toutes les questions » est coché. */
+function conditionMet(q, seen){
+  seen = seen || new Set();
+  if(seen.has(q.id)) return true;
+  seen.add(q.id);
+  if(q.dependsOnQuestionId && q.dependsOnQuestionId !== q.id){
+    const dep = QUESTION_BY_ID[q.dependsOnQuestionId];
+    if(dep){
+      if(!dep.isPart && !dependencyMet((qState(dep.id) || {}).reponse, q.dependsOnValue)) return false;
+      if(!conditionMet(dep, seen)) return false;
+    }
+  }
+  if(q.parentQuestionId){
+    const parent = QUESTION_BY_ID[q.parentQuestionId];
+    if(parent && !conditionMet(parent, seen)) return false;
+  }
+  return true;
+}
+function isVisible(q){ return conditionMet(q); }
+
+/* Case « Afficher toutes les questions » (décochée par défaut, mémorisée dans le navigateur) */
+let SHOW_ALL_COND = false;
+try{ SHOW_ALL_COND = localStorage.getItem('bpp-show-all') === '1'; }catch(e){}
 /* Questions affichées et à renseigner : les lignes « PART » (partie initiale commune à
    plusieurs questions, sans réponse) sont exclues de la progression, de l'analyse et des exports. */
 function visibleQuestions(){ return ALL_QUESTIONS.filter(q=>!q.isPart && isVisible(q)); }
@@ -1440,6 +1469,15 @@ function setAuditMode(mode){
   updateProgress();
 }
 document.querySelectorAll('.mode-btn').forEach(b=>b.addEventListener('click', ()=>setAuditMode(b.dataset.mode)));
+(function(){
+  const cb = document.getElementById('showAllCond');
+  cb.checked = SHOW_ALL_COND;
+  cb.addEventListener('change', ()=>{
+    SHOW_ALL_COND = cb.checked;
+    try{ localStorage.setItem('bpp-show-all', SHOW_ALL_COND ? '1' : '0'); }catch(e){}
+    refreshVisibility();
+  });
+})();
 
 /* Décalage sous l'en-tête et la barre de progression collants, pour le menu latéral
    et l'ancrage des cartes */
@@ -1494,9 +1532,30 @@ function buildQuestionItem(q, depth){
   return wrap;
 }
 
+function hasContent(st){
+  return !!(st && (st.reponse || st.commentaire || st.preuve_texte || st.preuve_fichier_nom));
+}
+/* Remet une question à blanc (réponse, commentaire, preuve et fichier joint) et l'enregistre */
+function resetQuestion(qid){
+  const st = qState(qid);
+  if(!st) return;
+  const hadFile = !!st.preuve_fichier_nom;
+  Object.assign(st, {reponse:null, comment_actif:false, commentaire:'', preuve_texte:'',
+                     preuve_fichier_nom:null, preuve_fichier_url:null, answered_in:null});
+  const evalId = EVALUATION_ID;
+  if(hadFile) queueForQuestion(qid, ()=>apiFetch(`/evaluations/${evalId}/responses/${qid}/file`, {method:'DELETE'})
+    .then(res=>{ if(res && res.version) applyServerMeta(qid, res); }).catch(()=>{}));
+  scheduleSave(qid);
+  const q = QUESTION_BY_ID[qid];
+  const old = document.getElementById('q-' + qid);
+  if(q && old) old.replaceWith(renderQuestionCard(q, q.depth));
+}
+
 function refreshVisibility(){
   ALL_QUESTIONS.forEach(q=>{
-    if(!QITEM_EL[q.id]) return;
+    const el = QITEM_EL[q.id];
+    if(!el) return;
+    el.style.display = (SHOW_ALL_COND || conditionMet(q)) ? '' : 'none';
     const card = document.getElementById('q-' + q.id);
     if(card) applyExclusion(card, q);
   });
@@ -1645,6 +1704,21 @@ function renderQuestionCard(q, depth){
 
   card.querySelectorAll('input[type=radio]').forEach(r=>{
     r.addEventListener('change', ()=>{
+      const previous = st.reponse;
+      const before = new Set(ALL_QUESTIONS.filter(x=>exclusionOf(x)).map(x=>x.id));
+      st.reponse = r.value;
+      const toReset = ALL_QUESTIONS.filter(x=>!before.has(x.id) && exclusionOf(x) && hasContent(qState(x.id)));
+      if(toReset.length){
+        const list = toReset.slice(0, 12).map(x=>x.code).join(', ') + (toReset.length > 12 ? '…' : '');
+        if(!confirm(`Cette réponse rend sans objet ${toReset.length} question${toReset.length>1?'s':''} déjà renseignée${toReset.length>1?'s':''} (${list}).\n\n`
+                    + `${toReset.length>1?'Elles seront réinitialisées':'Elle sera réinitialisée'} (réponse, commentaire et preuve). Continuer ?`)){
+          st.reponse = previous;
+          card.querySelectorAll('input[type=radio]').forEach(x=>{ x.checked = x.value === previous; });
+          return;
+        }
+        toReset.forEach(x=>resetQuestion(x.id));
+      }
+      st.reponse = previous;
       markAnsweredHere(st);
       st.reponse = r.value;
       card.classList.add('answered');
