@@ -279,7 +279,9 @@
     background:#2b2b2b;color:#fff;font-weight:400;
     font-size:12.5px;line-height:1.5;text-align:left;white-space:normal;
     padding:12px 14px;border-radius:10px;box-shadow:var(--shadow-lg);
+    max-height:min(60vh, 420px);overflow-y:auto;cursor:auto;
   }
+  .ref-badge.up .ref-tooltip{top:auto;bottom:24px;}
   .ref-badge:hover .ref-tooltip, .ref-badge.open .ref-tooltip{display:block;}
 
   .answers{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px;}
@@ -520,7 +522,7 @@
   .mail-status.ko{background:var(--orange-bg);color:var(--orange);}
 
   /* ===== Carte question — design « signalétique » ===== */
-  .qcard, .qpart{background:#fff;border:1.5px solid #aeb9c5;border-radius:12px;padding:0;overflow:hidden;
+  .qcard, .qpart{background:#fff;border:1.5px solid #aeb9c5;border-radius:12px;padding:0;
     box-shadow:0 2px 6px rgba(15,25,40,.08);margin-bottom:10px;}
   .qcard[data-reponse]{border-left-width:6px;}
   .qrow{display:grid;grid-template-columns:auto 1fr auto;gap:0 16px;padding:14px 16px;align-items:start;}
@@ -568,7 +570,9 @@
   .locked-note strong, .excluded-note strong{color:#fff;}
   .bar-ic{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex:none;background:#e07800;color:#fff;}
   .bar-ic svg{width:17px;height:17px;}
-  .excluded-note{background:#4a545e;} .excluded-note .bar-ic{background:#7c868f;}
+  .excluded-note{background:#4a545e;}
+  .qcard > :first-child, .qpart > :first-child{border-top-left-radius:10px;border-top-right-radius:10px;}
+  .qcard > :last-child, .qpart > :last-child{border-bottom-left-radius:10px;border-bottom-right-radius:10px;} .excluded-note .bar-ic{background:#7c868f;}
   .bar-link{margin-left:auto;background:none;border:none;color:#ffb35c;font:inherit;font-weight:700;cursor:pointer;white-space:nowrap;}
   .bar-link:hover{text-decoration:underline;}
   .qcard.locked, .qcard.excluded, .qpart.excluded{background:#fff;}
@@ -1870,6 +1874,17 @@ function renderQuestionCard(q, depth){
   return card;
 }
 
+/* Info-bulle d'une référence : vers le haut si elle déborderait en bas de l'écran */
+document.addEventListener('mouseover', (e)=>{
+  const badge = e.target.closest ? e.target.closest('.ref-badge') : null;
+  if(!badge || badge.contains(e.relatedTarget)) return;
+  const tip = badge.querySelector('.ref-tooltip');
+  if(!tip) return;
+  badge.classList.remove('up');
+  const r = badge.getBoundingClientRect();
+  const needed = Math.min((tip.scrollHeight || 300) + 30, window.innerHeight * 0.6, 450);
+  if(window.innerHeight - r.bottom < needed && r.top > window.innerHeight - r.bottom) badge.classList.add('up');
+});
 document.addEventListener('click', (e)=>{
   const badge = e.target.closest ? e.target.closest('.ref-badge, .icon-badge:not(a)') : null;
   document.querySelectorAll('.ref-badge.open, .icon-badge.open').forEach(el=>{ if(el!==badge) el.classList.remove('open'); });
