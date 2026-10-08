@@ -229,7 +229,7 @@ def reopen_evaluation(evaluation_id: int, user: dict = Depends(require_expert)):
 RESPONSE_COLUMNS = (
     "r.question_id, r.reponse, r.comment_actif, r.commentaire, r.preuve_texte, "
     "r.preuve_fichier_nom, r.preuve_fichier_chemin, r.criticite, r.risque_maitrise, r.action, "
-    "r.version, r.updated_at, COALESCE(NULLIF(u.nom, ''), u.login) AS updated_by_nom"
+    "r.version, r.updated_at, r.answered_in, COALESCE(NULLIF(u.nom, ''), u.login) AS updated_by_nom"
 )
 RESPONSE_FROM = "FROM responses r LEFT JOIN users u ON u.id = r.updated_by "
 
@@ -252,6 +252,7 @@ def _row_to_json(row):
         "action": row["action"],
         # travail à plusieurs : version (détection des modifications concurrentes) et dernier auteur
         "version": row["version"],
+        "answered_in": row["answered_in"],
         "updated_at": row["updated_at"].isoformat() if row["updated_at"] else None,
         "updated_by_nom": row["updated_by_nom"],
     }
@@ -274,6 +275,8 @@ class ResponseUpdate(BaseModel):
     action: str = ""
     # version de la réponse sur laquelle l'utilisateur travaillait (None : pas de contrôle)
     base_version: Optional[int] = None
+    # chapitre BPP où la question est renseignée (fixé à la 1re saisie, conservé ensuite)
+    answered_in: Optional[str] = None
 
 
 ALLOWED_REPONSE = {None, "oui", "non", "partiel", "na"}
@@ -293,6 +296,8 @@ def upsert_response(evaluation_id: int, question_id: str, body: ResponseUpdate,
         raise HTTPException(status_code=422, detail="Criticité invalide")
     if body.risque_maitrise not in ALLOWED_RISQUE:
         raise HTTPException(status_code=422, detail="Valeur de risque maîtrisé invalide")
+    if body.answered_in is not None and not re.fullmatch(r"\d|LD\d|autre", body.answered_in):
+        raise HTTPException(status_code=422, detail="Chapitre invalide")
 
     if user["role"] != "expert":
         # criticité / risque / action relèvent de l'expertise : un membre ne peut pas les modifier
@@ -307,8 +312,10 @@ def upsert_response(evaluation_id: int, question_id: str, body: ResponseUpdate,
     saved = execute_returning(
         """
         INSERT INTO responses (evaluation_id, question_id, reponse, comment_actif, commentaire,
-                                preuve_texte, criticite, risque_maitrise, action, updated_at, updated_by, version)
-        VALUES (%(e)s, %(q)s, %(rep)s, %(ca)s, %(com)s, %(pt)s, %(crit)s, %(risk)s, %(act)s, now(), %(uid)s, 1)
+                                preuve_texte, criticite, risque_maitrise, action, updated_at, updated_by, version,
+                                answered_in)
+        VALUES (%(e)s, %(q)s, %(rep)s, %(ca)s, %(com)s, %(pt)s, %(crit)s, %(risk)s, %(act)s, now(), %(uid)s, 1,
+                %(ain)s)
         ON CONFLICT (evaluation_id, question_id) DO UPDATE SET
             reponse = EXCLUDED.reponse,
             comment_actif = EXCLUDED.comment_actif,
@@ -319,7 +326,8 @@ def upsert_response(evaluation_id: int, question_id: str, body: ResponseUpdate,
             action = EXCLUDED.action,
             updated_at = now(),
             updated_by = EXCLUDED.updated_by,
-            version = responses.version + 1
+            version = responses.version + 1,
+            answered_in = COALESCE(responses.answered_in, EXCLUDED.answered_in)
         WHERE %(base)s::int IS NULL OR responses.version = %(base)s::int
         RETURNING version
         """,
@@ -327,6 +335,7 @@ def upsert_response(evaluation_id: int, question_id: str, body: ResponseUpdate,
             "e": evaluation_id, "q": question_id, "rep": body.reponse, "ca": body.comment_actif,
             "com": body.commentaire, "pt": body.preuve_texte, "crit": body.criticite,
             "risk": body.risque_maitrise, "act": body.action, "uid": user["id"], "base": body.base_version,
+            "ain": body.answered_in,
         },
     )
     row = _fetch_response(evaluation_id, question_id)

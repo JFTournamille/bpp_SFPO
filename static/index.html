@@ -213,6 +213,17 @@
   .pending-note .btn:hover{background:var(--orange);color:#fff;}
   .qcard.flash{box-shadow:0 0 0 3px var(--fuchsia);transition:box-shadow .3s;}
 
+  /* question déjà renseignée dans un autre chapitre : verrouillée ici */
+  .qcard.locked{background:#eceff3;}
+  .qcard.locked .qtext{font-style:italic;color:var(--text-light);}
+  .qcard.locked .answers label{opacity:.6;cursor:not-allowed;}
+  .qcard.locked .qcard-extra{opacity:.6;}
+  .locked-note{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12.5px;color:var(--gray);
+    background:#fff;border:1px dashed var(--border);border-radius:10px;padding:6px 10px;margin:0 0 10px;}
+  .locked-note .btn{margin-left:auto;}
+  h2.extra-title{font-size:15px;color:var(--fuchsia);margin:30px 0 4px;padding-top:18px;border-top:2px solid var(--border);}
+  h2.extra-title span{display:block;font-size:12px;font-weight:500;color:var(--text-light);margin-top:2px;}
+
   /* sous-questions imbriquées (chapeau + enfants) */
   .qchildren{margin:8px 0 12px 34px;padding-left:14px;border-left:2px solid var(--bg-soft-2);}
   .sub-arrow{color:var(--text-light);margin-right:4px;}
@@ -253,13 +264,13 @@
 
   .ref-badge{
     flex:none;position:relative;display:inline-flex;align-items:center;
-    font-size:11px;font-weight:600;color:var(--blue-dark);background:#dde8f5;
-    border:1px solid #b9cee6;
+    font-size:11px;font-weight:700;color:var(--fuchsia-dark);background:#fff;
+    border:1.5px solid var(--fuchsia);
     padding:2px 9px;border-radius:var(--radius-pill);
     cursor:help;white-space:nowrap;margin-top:1px;user-select:none;
   }
   /* références BPP en style clair : à ne pas confondre avec le numéro de question (bleu plein) */
-  .ref-badge:hover, .ref-badge.open{background:#c9dbf0;border-color:#9dbbe0;}
+  .ref-badge:hover, .ref-badge.open{background:var(--fuchsia);border-color:var(--fuchsia);color:#fff;}
   .ref-badge .ref-tooltip{
     display:none;position:absolute;z-index:50;
     top:24px;left:0;
@@ -833,8 +844,10 @@ function displayTitle(t){
 function flattenQuestions(q, section, chapterNum, chapterTitle, sub, depth, out, bppChap, parentId){
   if(depth === 0){
     // chapitres BPP du bloc = ceux cités par la question et par toutes ses sous-questions
+    // + chapitre d'origine (thématique où la question est rangée dans le référentiel)
     bppChap = new Set();
     (function collect(n){ refChapters(n).forEach(c=>bppChap.add(c)); (n.children||[]).forEach(collect); })(q);
+    if(THEME_CHAP[chapterNum - 1]) bppChap.add(THEME_CHAP[chapterNum - 1]);
     if(!bppChap.size) bppChap.add('autre');
     ROOT_QUESTIONS.push({node:q, chapterNum, bppChap, section, sub, order: ROOT_QUESTIONS.length});
   }
@@ -842,7 +855,7 @@ function flattenQuestions(q, section, chapterNum, chapterTitle, sub, depth, out,
     sectionId: section.id, sectionTitle: section.title,
     chapterNum, chapterTitle,
     subId: sub ? sub.id : null, subTitle: sub ? sub.title : null,
-    depth, bppChap,
+    depth, bppChap, homeChap: THEME_CHAP[chapterNum - 1] || [...bppChap][0],
     parentQuestionId: parentId || null, // l'API imbrique les sous-questions sans renvoyer ce lien
   });
   // question qui complète une ligne « PART » : on garde l'amorce pour les vues à plat (analyse, export)
@@ -857,10 +870,26 @@ function flattenSection(section, chapterNum, chapterTitle, sub, out){
   section.questions.forEach(q=>flattenQuestions(q, section, chapterNum, chapterTitle, sub, 0, out));
   section.sections.forEach(s=>flattenSection(s, chapterNum, chapterTitle, sub || {id:s.id, title:s.title}, out));
 }
+/* Chapitre BPP correspondant à chaque thématique (1re niveau du référentiel) : même intitulé,
+   ou « LDx » dans le titre. Les deux modes de parcours partagent ainsi la même notion de chapitre. */
+let THEME_CHAP = [];
+function normTitle(t){ return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
+function themeChapter(title){
+  const ld = /\bLD\s*(\d)\b/i.exec(title);
+  if(ld) return 'LD' + ld[1];
+  const c = BPP_CHAPTERS.find(c=>normTitle(c.title) === normTitle(title));
+  return c ? c.key : null;
+}
+function chapterTitleOf(key){
+  const c = BPP_CHAPTERS.find(c=>c.key === key);
+  if(!c) return key === 'autre' ? 'Sans référence BPP' : key;
+  return /^\d+$/.test(key) ? key + '. ' + c.title : c.title;
+}
 function buildAllQuestions(){
   ALL_QUESTIONS = [];
   QUESTION_BY_ID = {};
   ROOT_QUESTIONS = [];
+  THEME_CHAP = SECTIONS.map(ch=>themeChapter(ch.title));
   SECTIONS.forEach((ch, i)=>flattenSection(ch, i+1, ch.title, null, ALL_QUESTIONS));
   ALL_QUESTIONS.forEach(q=>{ q.isBase = isBaseQuestion(q); });
 }
@@ -1204,6 +1233,7 @@ async function persist(qid, evalId){
     preuve_texte: st.preuve_texte, criticite: st.criticite,
     risque_maitrise: st.risque_maitrise, action: st.action,
     base_version: st.version || 0,
+    answered_in: st.answered_in || null,
   };
   try{
     const res = await apiFetch(`/evaluations/${evalId}/responses/${qid}`, {
@@ -1284,8 +1314,8 @@ let QITEM_EL = {}; // question_id -> élément conteneur (carte + sous-questions
 function auditGroups(){
   if(auditMode === 'theme'){
     return SECTIONS.map((ch, i)=>({
-      key: 't' + ch.id, kicker: 'Thématique', title: displayTitle(ch.title),
-      match: q=>q.chapterNum === i+1, section: ch,
+      key: 't' + ch.id, kicker: 'Thématique', title: displayTitle(ch.title), chap: THEME_CHAP[i],
+      match: q=>q.chapterNum === i+1 || (!!THEME_CHAP[i] && q.bppChap.has(THEME_CHAP[i])), section: ch, themeNum: i+1,
     }));
   }
   const chapters = BPP_CHAPTERS.slice();
@@ -1293,7 +1323,7 @@ function auditGroups(){
   return chapters
     .filter(c=>ROOT_QUESTIONS.some(r=>r.bppChap.has(c.key)))
     .map(c=>({
-      key: 'c' + c.key, bppChap: c.key,
+      key: 'c' + c.key, bppChap: c.key, chap: c.key,
       kicker: c.key === 'autre' ? 'Chapitre BPP' : (c.key.startsWith('LD') ? 'Ligne directrice ' + c.key : 'Chapitre BPP ' + c.key),
       title: c.title, sideTitle: /^\d+$/.test(c.key) ? c.key + '. ' + c.title : c.title,
       match: q=>q.bppChap.has(c.key),
@@ -1334,10 +1364,27 @@ function renderQuestionnaire(){
 
   if(group.section){
     renderSectionBody(group.section, body, 1);
+    // questions qui concernent aussi ce chapitre mais sont rangées dans une autre thématique
+    const extra = group.chap ? ROOT_QUESTIONS.filter(r=>r.chapterNum !== group.themeNum && r.bppChap.has(group.chap)) : [];
+    if(extra.length){
+      const h = document.createElement('h2');
+      h.className = 'extra-title';
+      h.innerHTML = `Questions posées dans d'autres thématiques et concernant aussi ce chapitre
+        <span>${extra.length} question${extra.length>1?'s':''} · une question déjà renseignée est verrouillée ici et se modifie là où elle a été répondue</span>`;
+      body.appendChild(h);
+      renderRootList(extra, body);
+    }
   } else {
-    // Par chapitre BPP : toutes les questions citant ce chapitre, dans l'ordre du référentiel,
-    // avec l'intertitre (thématique · sous-chapitre) à chaque changement de section
-    const roots = ROOT_QUESTIONS.filter(r=>r.bppChap.has(group.bppChap)).sort((x, y)=>x.order - y.order);
+    // Par chapitre BPP : toutes les questions concernant ce chapitre, dans l'ordre du référentiel
+    renderRootList(ROOT_QUESTIONS.filter(r=>r.bppChap.has(group.bppChap)), body);
+  }
+  renderGroupNav(groups, group);
+}
+
+/* Liste de blocs (question + sous-questions) dans l'ordre du référentiel, avec l'intertitre
+   (thématique · sous-chapitre) à chaque changement de section */
+function renderRootList(roots, body){
+    roots = roots.slice().sort((x, y)=>x.order - y.order);
     let scDiv = null, lastSection = null;
     roots.forEach(r=>{
       if(r.section.id !== lastSection){
@@ -1355,8 +1402,9 @@ function renderQuestionnaire(){
       }
       scDiv.appendChild(buildQuestionItem(r.node, 0));
     });
-  }
+}
 
+function renderGroupNav(groups, group){
   const idx = groups.indexOf(group);
   const prev = groups[idx-1], next = groups[idx+1];
   const btnPrev = document.getElementById('btnPrevGroup');
@@ -1483,6 +1531,24 @@ function renderPartCard(q, depth){
   return card;
 }
 
+/* Une question qui concerne plusieurs chapitres y est présentée partout ; elle se renseigne
+   une fois : le chapitre de la 1re saisie est mémorisé (answered_in) et, une fois répondue,
+   la question est verrouillée dans les autres chapitres. Réponses antérieures : chapitre
+   d'origine de la question dans le référentiel. */
+function currentChap(){ const g = currentGroup(); return g ? g.chap : null; }
+function answeredWhere(q, st){
+  q = QUESTION_BY_ID[q.id] || q; // les cartes sont construites depuis l'arbre : chapitres sur la version à plat
+  const w = st.answered_in;
+  return (w && q.bppChap.has(w)) ? w : q.homeChap;
+}
+function isLockedHere(q, st){
+  const here = currentChap();
+  return !!(st && st.reponse && here && answeredWhere(q, st) !== here);
+}
+function markAnsweredHere(st){
+  if(!st.answered_in && !st.reponse && currentChap()) st.answered_in = currentChap();
+}
+
 function renderQuestionCard(q, depth){
   if(q.isPart) return renderPartCard(q, depth);
   const st = qState(q.id);
@@ -1536,10 +1602,22 @@ function renderQuestionCard(q, depth){
   if(isReadOnly()){
     card.querySelectorAll('input, textarea, button').forEach(el=>{ el.disabled = true; });
     card.querySelector('.rm').style.display = 'none';
+  } else if(isLockedHere(q, st)){
+    const where = answeredWhere(q, st);
+    card.classList.add('locked');
+    card.querySelectorAll('input, textarea, button').forEach(el=>{ el.disabled = true; });
+    card.querySelector('.rm').style.display = 'none';
+    const note = document.createElement('div');
+    note.className = 'locked-note';
+    note.innerHTML = `<span>&#128274; Déjà répondu dans le chapitre <strong>${escapeHtml(chapterTitleOf(where))}</strong></span>
+      <button type="button" class="btn small ghost">Modifier dans ce chapitre</button>`;
+    note.querySelector('button').addEventListener('click', ()=>goToQuestion(q.id, where));
+    card.insertBefore(note, card.firstChild);
   }
 
   card.querySelectorAll('input[type=radio]').forEach(r=>{
     r.addEventListener('change', ()=>{
+      markAnsweredHere(st);
       st.reponse = r.value;
       card.classList.add('answered');
       card.dataset.reponse = r.value;
@@ -1552,15 +1630,16 @@ function renderQuestionCard(q, depth){
   const chk = card.querySelector('.chk-comment');
   const txtC = card.querySelector('.txt-comment');
   chk.addEventListener('change', ()=>{
+    markAnsweredHere(st);
     st.comment_actif = chk.checked;
     txtC.style.display = chk.checked ? 'block' : 'none';
     if(chk.checked) txtC.focus();
     scheduleSave(q.id);
   });
-  txtC.addEventListener('input', ()=>{ st.commentaire = txtC.value; scheduleSave(q.id); });
+  txtC.addEventListener('input', ()=>{ markAnsweredHere(st); st.commentaire = txtC.value; scheduleSave(q.id); });
 
   const txtP = card.querySelector('.txt-preuve');
-  txtP.addEventListener('input', ()=>{ st.preuve_texte = txtP.value; scheduleSave(q.id); });
+  txtP.addEventListener('input', ()=>{ markAnsweredHere(st); st.preuve_texte = txtP.value; scheduleSave(q.id); });
 
   const fileInput = card.querySelector('.file-preuve');
   const fileBtn = card.querySelector('.file-btn');
@@ -1665,11 +1744,12 @@ function groupLabelOf(q){
   const g = auditGroups().find(x=>x.match(q));
   return g ? (g.sideTitle || g.title) : '';
 }
-function goToQuestion(qid){
+function goToQuestion(qid, chap){
   const q = QUESTION_BY_ID[qid];
   const groups = auditGroups();
   const current = currentGroup(groups);
-  const target = q && (current && current.match(q) ? current : groups.find(g=>g.match(q)));
+  const target = q && ((chap && groups.find(g=>g.chap === chap && g.match(q)))
+    || (current && current.match(q) ? current : groups.find(g=>g.match(q))));
   if(!target) return;
   if(!current || target.key !== current.key) selectGroup(target.key);
   setTimeout(()=>{
