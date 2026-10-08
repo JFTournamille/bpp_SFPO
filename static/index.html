@@ -142,9 +142,10 @@
   .mode-switch button:hover:not(.active){color:var(--blue-dark);}
 
   /* ===== Mise en page : menu à gauche + contenu ===== */
-  .audit-content.fade-hidden{opacity:0;transform:translateY(6px);}
-  .audit-content.fade-in{opacity:1;transform:none;transition:opacity .28s ease, transform .28s ease;}
-  @media (prefers-reduced-motion: reduce){ .audit-content.fade-in{transition:none;} }
+  .audit-content.fade-out{opacity:0;filter:blur(2px);transition:opacity .2s ease-in, filter .2s ease-in;}
+  .audit-content.fade-hidden{opacity:0;filter:blur(3px);}
+  .audit-content.fade-in{opacity:1;filter:none;transition:opacity .55s cubic-bezier(.22,.61,.36,1), filter .55s cubic-bezier(.22,.61,.36,1);}
+  @media (prefers-reduced-motion: reduce){ .audit-content.fade-in, .audit-content.fade-out{transition:none;filter:none;} }
   .audit-layout{display:grid;grid-template-columns:300px minmax(0,1fr);gap:28px;align-items:start;}
   /* Menu latéral : dégradé de la charte SFPO (bleu → fuchsia), texte clair */
   .audit-side{
@@ -1529,23 +1530,36 @@ function renderGroupNav(groups, group){
   btnNext.onclick = next ? ()=>selectGroup(next.key) : null;
 }
 
-function selectGroup(key){
+/* Changement de rubrique en fondu enchaîné doux : l'ancien contenu s'estompe, la page se replace
+   en haut de la rubrique, puis le nouveau contenu apparaît (léger flou qui se dissipe).
+   onShown : appelé une fois la nouvelle rubrique affichée (ex. aller à une question). */
+const FADE_OUT_MS = 200;
+let fadeTimer = null;
+function selectGroup(key, onShown){
   currentGroupKey[auditMode] = key;
   saveNavPrefs();
-  renderQuestionnaire();
-  refreshVisibility();
-  updateProgress();
-  // changement de rubrique en fondu : contenu masqué, repositionnement instantané en haut, réapparition
   const content = document.querySelector('.audit-content');
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const show = ()=>{
+    renderQuestionnaire();
+    refreshVisibility();
+    updateProgress();
+    const layout = document.querySelector('.audit-layout');
+    const top = layout.getBoundingClientRect().top + window.scrollY - stickyTop();
+    if(window.scrollY > top) window.scrollTo({top, behavior:'instant'});
+    content.classList.remove('fade-out');
+    content.classList.add('fade-hidden');
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      content.classList.remove('fade-hidden');
+      content.classList.add('fade-in');
+      if(onShown) onShown();
+    }));
+  };
+  clearTimeout(fadeTimer);
+  if(reduce){ content.classList.remove('fade-in'); show(); return; }
   content.classList.remove('fade-in');
-  content.classList.add('fade-hidden');
-  const layout = document.querySelector('.audit-layout');
-  const top = layout.getBoundingClientRect().top + window.scrollY - stickyTop();
-  if(window.scrollY > top) window.scrollTo({top, behavior:'instant'});
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    content.classList.remove('fade-hidden');
-    content.classList.add('fade-in');
-  }));
+  content.classList.add('fade-out');
+  fadeTimer = setTimeout(show, FADE_OUT_MS);
 }
 
 function setAuditMode(mode){
@@ -1910,14 +1924,15 @@ function goToQuestion(qid, chap){
   const target = q && ((chap && groups.find(g=>g.chap === chap && g.match(q)))
     || (current && current.match(q) ? current : groups.find(g=>g.match(q))));
   if(!target) return;
-  if(!current || target.key !== current.key) selectGroup(target.key);
-  setTimeout(()=>{
+  const focus = ()=>{
     const card = document.getElementById('q-' + qid);
     if(!card) return;
     card.scrollIntoView({block:'center', behavior:'smooth'});
     card.classList.add('flash');
     setTimeout(()=>card.classList.remove('flash'), 2500);
-  }, 80);
+  };
+  if(!current || target.key !== current.key) selectGroup(target.key, ()=>setTimeout(focus, 60));
+  else setTimeout(focus, 60);
 }
 
 function updateProgress(){
