@@ -142,6 +142,9 @@
   .mode-switch button:hover:not(.active){color:var(--blue-dark);}
 
   /* ===== Mise en page : menu à gauche + contenu ===== */
+  .audit-content.fade-hidden{opacity:0;transform:translateY(6px);}
+  .audit-content.fade-in{opacity:1;transform:none;transition:opacity .28s ease, transform .28s ease;}
+  @media (prefers-reduced-motion: reduce){ .audit-content.fade-in{transition:none;} }
   .audit-layout{display:grid;grid-template-columns:300px minmax(0,1fr);gap:28px;align-items:start;}
   /* Menu latéral : dégradé de la charte SFPO (bleu → fuchsia), texte clair */
   .audit-side{
@@ -1455,9 +1458,17 @@ function selectGroup(key){
   renderQuestionnaire();
   refreshVisibility();
   updateProgress();
+  // changement de rubrique en fondu : contenu masqué, repositionnement instantané en haut, réapparition
+  const content = document.querySelector('.audit-content');
+  content.classList.remove('fade-in');
+  content.classList.add('fade-hidden');
   const layout = document.querySelector('.audit-layout');
   const top = layout.getBoundingClientRect().top + window.scrollY - stickyTop();
-  if(window.scrollY > top) window.scrollTo({top, behavior:'smooth'});
+  if(window.scrollY > top) window.scrollTo({top, behavior:'instant'});
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    content.classList.remove('fade-hidden');
+    content.classList.add('fade-in');
+  }));
 }
 
 function setAuditMode(mode){
