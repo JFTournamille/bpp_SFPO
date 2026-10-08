@@ -202,16 +202,15 @@
   h3.subchapter-title{flex-direction:column;align-items:flex-start;gap:0;margin-top:18px;}
   .subchapter-kicker{font-size:11px;font-weight:600;color:var(--fuchsia);text-transform:none;letter-spacing:0;}
 
-  /* questions masquées en attente d'une réponse située ailleurs */
-  .pending-note{background:var(--orange-bg);color:#7a3a00;border-radius:12px;padding:12px 16px;font-size:13px;margin:0 0 16px;display:none;}
-  .pending-note.show{display:block;}
-  .pending-note ul{margin:6px 0 0;padding:0;list-style:none;max-height:260px;overflow:auto;}
-  .pending-note summary{cursor:pointer;}
-  .pending-note li{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:4px 0;border-top:1px solid rgba(194,87,0,.15);}
-  .pending-note li:first-child{border-top:none;}
-  .pending-note .btn{border-color:var(--orange);color:var(--orange);background:#fff;}
-  .pending-note .btn:hover{background:var(--orange);color:#fff;}
   .qcard.flash{box-shadow:0 0 0 3px var(--fuchsia);transition:box-shadow .3s;}
+
+  /* question sans objet (condition non remplie) : grisée et verrouillée */
+  .qcard.excluded, .qpart.excluded{background:#eceff3;}
+  .qcard.excluded .qtext, .qpart.excluded .qtext{font-style:italic;color:var(--text-light);}
+  .qcard.excluded .answers label{opacity:.55;cursor:not-allowed;}
+  .qcard.excluded .qcard-extra{opacity:.55;}
+  .excluded-note{font-size:12.5px;color:var(--gray);background:#fff;border:1px dashed var(--border);
+    border-radius:10px;padding:6px 10px;margin:0 0 10px;}
 
   /* question déjà renseignée dans un autre chapitre : verrouillée ici */
   .qcard.locked{background:#eceff3;}
@@ -264,13 +263,13 @@
 
   .ref-badge{
     flex:none;position:relative;display:inline-flex;align-items:center;
-    font-size:11px;font-weight:700;color:var(--fuchsia-dark);background:#fff;
-    border:1.5px solid var(--fuchsia);
+    font-size:11px;font-weight:700;color:#fff;background:var(--fuchsia);
+    border:1px solid var(--fuchsia);
     padding:2px 9px;border-radius:var(--radius-pill);
     cursor:help;white-space:nowrap;margin-top:1px;user-select:none;
   }
   /* références BPP en style clair : à ne pas confondre avec le numéro de question (bleu plein) */
-  .ref-badge:hover, .ref-badge.open{background:var(--fuchsia);border-color:var(--fuchsia);color:#fff;}
+  .ref-badge:hover, .ref-badge.open{background:var(--fuchsia-dark);border-color:var(--fuchsia-dark);color:#fff;}
   .ref-badge .ref-tooltip{
     display:none;position:absolute;z-index:50;
     top:24px;left:0;
@@ -656,7 +655,6 @@
               <span class="pct" id="groupPct"></span>
             </div>
           </div>
-          <div class="pending-note" id="pendingNote"></div>
           <div id="groupBody"></div>
           <div class="group-nav">
             <button type="button" class="btn ghost small" id="btnPrevGroup"></button>
@@ -894,33 +892,38 @@ function buildAllQuestions(){
   ALL_QUESTIONS.forEach(q=>{ q.isBase = isBaseQuestion(q); });
 }
 
-/* Une question conditionnelle n'est affichée que si la question dont elle dépend a reçu
-   la réponse attendue (condition « oui » : « oui » ou « partiellement conforme ») ; elle
-   est masquée tant que cette question est sans réponse, ou si la réponse est « non » / « NA ».
-   Sa question de dépendance et sa question chapeau (le cas échéant) doivent elles-mêmes
-   être visibles. */
+/* Questions conditionnelles : jamais masquées. Tant que la question dont elle dépend est sans
+   réponse, la question reste ouverte. Si cette question a reçu une réponse qui ne remplit pas la
+   condition (condition « oui » : « oui » ou « partiellement »), la question est « sans objet » :
+   grisée, verrouillée, avec la mention de la réponse en cause, et exclue de la progression, de
+   l'analyse et des exports. Même règle si sa question de dépendance ou sa question chapeau est
+   elle-même sans objet. */
 function dependencyMet(reponse, expected){
   return reponse === expected || (expected === 'oui' && reponse === 'partiel');
 }
-function isVisible(q, seen){
-  // garde-fou contre les dépendances circulaires du référentiel (ex. Q211 dépend d'elle-même)
+function exclusionOf(q, seen){
+  // garde-fou contre les dépendances circulaires du référentiel
   seen = seen || new Set();
-  if(seen.has(q.id)) return true;
+  if(seen.has(q.id)) return null;
   seen.add(q.id);
   if(q.dependsOnQuestionId && q.dependsOnQuestionId !== q.id){
     const dep = QUESTION_BY_ID[q.dependsOnQuestionId];
     if(dep){
-      // une ligne « PART » n'a pas de réponse : la dépendance porte seulement sur son affichage
-      if(!dep.isPart && !dependencyMet((qState(dep.id) || {}).reponse, q.dependsOnValue)) return false;
-      if(!isVisible(dep, seen)) return false;
+      // une ligne « PART » n'a pas de réponse : seule compte sa propre situation
+      const r = dep.isPart ? null : (qState(dep.id) || {}).reponse;
+      if(r && !dependencyMet(r, q.dependsOnValue)) return {dep, reponse: r};
+      const e = exclusionOf(dep, seen);
+      if(e) return e;
     }
   }
   if(q.parentQuestionId){
     const parent = QUESTION_BY_ID[q.parentQuestionId];
-    if(parent && !isVisible(parent, seen)) return false;
+    const e = parent && exclusionOf(parent, seen);
+    if(e) return e;
   }
-  return true;
+  return null;
 }
+function isVisible(q){ return !exclusionOf(q); }
 /* Questions affichées et à renseigner : les lignes « PART » (partie initiale commune à
    plusieurs questions, sans réponse) sont exclues de la progression, de l'analyse et des exports. */
 function visibleQuestions(){ return ALL_QUESTIONS.filter(q=>!q.isPart && isVisible(q)); }
@@ -1419,7 +1422,6 @@ function renderGroupNav(groups, group){
 
 function selectGroup(key){
   currentGroupKey[auditMode] = key;
-  document.getElementById('pendingNote').innerHTML = '';
   saveNavPrefs();
   renderQuestionnaire();
   refreshVisibility();
@@ -1494,9 +1496,35 @@ function buildQuestionItem(q, depth){
 
 function refreshVisibility(){
   ALL_QUESTIONS.forEach(q=>{
-    const el = QITEM_EL[q.id];
-    if(el) el.style.display = isVisible(q) ? '' : 'none';
+    if(!QITEM_EL[q.id]) return;
+    const card = document.getElementById('q-' + q.id);
+    if(card) applyExclusion(card, q);
   });
+}
+
+/* Grise et verrouille une question « sans objet », avec la réponse en cause ; la rouvre sinon */
+function applyExclusion(card, q){
+  const ex = exclusionOf(QUESTION_BY_ID[q.id] || q);
+  card.classList.toggle('excluded', !!ex);
+  let note = card.querySelector('.excluded-note');
+  if(ex){
+    if(!note){
+      note = document.createElement('div');
+      note.className = 'excluded-note';
+      card.insertBefore(note, card.firstChild);
+    }
+    note.innerHTML = `&#8856; Sans objet : <strong>${escapeHtml(ex.dep.code)}</strong> a été répondue
+      « ${escapeHtml(RESPONSE_LABELS[ex.reponse] || ex.reponse)} »`;
+  } else if(note){
+    note.remove();
+  }
+  if(card.classList.contains('qcard')){
+    const st = qState(q.id) || {};
+    const disabled = isReadOnly() || card.classList.contains('locked') || !!ex;
+    card.querySelectorAll('.answers input, .qcard-extra input, .qcard-extra textarea, .qcard-extra button').forEach(el=>{ el.disabled = disabled; });
+    const rm = card.querySelector('.rm');
+    if(rm) rm.style.display = disabled ? 'none' : '';
+  }
 }
 
 /* Une bulle par référence BPP, chacune avec son propre texte : l'extrait stocké sur la
@@ -1692,58 +1720,6 @@ document.addEventListener('click', (e)=>{
 });
 
 /* ======================= PROGRESS ======================= */
-/* Question (affichée, sans réponse) dont dépend l'affichage d'une question masquée */
-function blockerOf(q, seen){
-  seen = seen || new Set();
-  if(seen.has(q.id)) return null;
-  seen.add(q.id);
-  if(q.dependsOnQuestionId && q.dependsOnQuestionId !== q.id){
-    const dep = QUESTION_BY_ID[q.dependsOnQuestionId];
-    if(dep){
-      if(!isVisible(dep)) return blockerOf(dep, seen);
-      if(!dep.isPart && !dependencyMet((qState(dep.id) || {}).reponse, q.dependsOnValue))
-        return (qState(dep.id) || {}).reponse ? null : dep; // répondue « non » / « NA » : masquage voulu
-    }
-  }
-  if(q.parentQuestionId){
-    const parent = QUESTION_BY_ID[q.parentQuestionId];
-    if(parent && !isVisible(parent)) return blockerOf(parent, seen);
-  }
-  return null;
-}
-
-/* Bandeau : questions du groupe affiché masquées en attendant la réponse à une question
-   « déclencheuse », située dans ce groupe ou ailleurs (ex. tout le chapitre 4 dépend de Q006,
-   Q185 à Q200 dépendent de Q068). Chaque déclencheuse a un bouton pour y aller. */
-function renderPendingNote(){
-  const note = document.getElementById('pendingNote');
-  const groups = auditGroups();
-  const group = currentGroup(groups);
-  if(!note || !group || !EVALUATION_ID){ if(note) note.className = 'pending-note'; return; }
-  const counts = new Map();
-  ALL_QUESTIONS.forEach(q=>{
-    if(q.isPart || !group.match(q) || isVisible(q)) return;
-    const b = blockerOf(q);
-    if(b) counts.set(b, (counts.get(b) || 0) + 1);
-  });
-  if(!counts.size){ note.className = 'pending-note'; note.innerHTML = ''; return; }
-  const total = [...counts.values()].reduce((a, n)=>a + n, 0);
-  // déplié d'office si une question déclencheuse est hors de la rubrique (sinon on ne la verrait pas)
-  const outside = [...counts.keys()].some(b=>!group.match(b));
-  const wasOpen = note.querySelector('details') ? note.querySelector('details').open : null;
-  note.innerHTML = `<details ${(wasOpen === null ? outside : wasOpen) ? 'open' : ''}><summary><strong>${total} question${total>1?'s':''} de cette rubrique ${total>1?'sont masquées':'est masquée'}</strong> :
-    ${total>1?'elles s\'afficheront':'elle s\'affichera'} selon votre réponse ${counts.size>1?'aux ' + counts.size + ' questions suivantes':'à la question suivante'}.</summary>
-    <ul>${[...counts.entries()].map(([b, n])=>`<li><span><strong>${escapeHtml(b.code)}</strong> — ${escapeHtml(fullQuestionText(b))}
-      <span class="muted">(${n} question${n>1?'s':''} en attente${group.match(b) ? '' : ' · ' + escapeHtml(groupLabelOf(b))})</span></span>
-      <button type="button" class="btn small" data-goto="${escapeHtml(b.id)}">Répondre</button></li>`).join('')}</ul></details>`;
-  note.className = 'pending-note show';
-  note.querySelectorAll('[data-goto]').forEach(btn=>btn.addEventListener('click', ()=>goToQuestion(btn.dataset.goto)));
-}
-
-function groupLabelOf(q){
-  const g = auditGroups().find(x=>x.match(q));
-  return g ? (g.sideTitle || g.title) : '';
-}
 function goToQuestion(qid, chap){
   const q = QUESTION_BY_ID[qid];
   const groups = auditGroups();
@@ -1762,7 +1738,6 @@ function goToQuestion(qid, chap){
 }
 
 function updateProgress(){
-  renderPendingNote();
   const visible = visibleQuestions();
   const all = countLabel(visible);
   document.getElementById('progressFill').style.width = all.pct + '%';
