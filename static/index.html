@@ -235,8 +235,6 @@
   .locked-note{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12.5px;color:var(--gray);
     background:#fff;border:1px dashed var(--border);border-radius:10px;padding:6px 10px;margin:0 0 10px;}
   .locked-note .btn{margin-left:auto;}
-  h2.extra-title{font-size:15px;color:var(--fuchsia);margin:30px 0 4px;padding-top:18px;border-top:2px solid var(--border);}
-  h2.extra-title span{display:block;font-size:12px;font-weight:500;color:var(--text-light);margin-top:2px;}
 
   /* sous-questions imbriquées (chapeau + enfants) */
   .qchildren{margin:8px 0 12px 34px;padding-left:14px;border-left:2px solid var(--bg-soft-2);}
@@ -1041,6 +1039,18 @@ function conditionMet(q, seen){
 }
 function isVisible(q){ return conditionMet(q); }
 
+/* Réponse déduite : une question sans objet parce que sa question maître a été répondue « Non »
+   (ou « Non applicable ») est réputée « Non » (ou « Non applicable »). Elle reste masquée, mais
+   compte dans les statistiques, l'analyse et l'export ; elle porte la criticité de sa question maître. */
+function derivedOf(q){
+  const ex = exclusionOf(QUESTION_BY_ID[q.id] || q);
+  return ex && (ex.reponse === 'non' || ex.reponse === 'na') ? ex : null;
+}
+function effReponse(q){ const d = derivedOf(q); return d ? d.reponse : ((qState(q.id) || {}).reponse || null); }
+function effCriticite(q){ const d = derivedOf(q); return (qState(d ? d.dep.id : q.id) || {}).criticite || null; }
+/* Questions prises en compte dans les statistiques : affichées + réponses déduites */
+function statQuestions(){ return ALL_QUESTIONS.filter(q=>!q.isPart && (isVisible(q) || derivedOf(q))); }
+
 /* Case « Afficher toutes les questions » (décochée par défaut, mémorisée dans le navigateur) */
 let SHOW_ALL_COND = false;
 try{ SHOW_ALL_COND = localStorage.getItem('bpp-show-all') === '1'; }catch(e){}
@@ -1490,15 +1500,8 @@ function renderQuestionnaire(){
     renderSectionBody(group.section, body, 1);
     // questions qui concernent aussi ce chapitre mais sont rangées dans une autre thématique
     const extra = group.chap ? ROOT_QUESTIONS.filter(r=>r.chapterNum !== group.themeNum && r.bppChap.has(group.chap)) : [];
-    if(extra.length){
-      const h = document.createElement('h2');
-      h.className = 'extra-title';
-      h.dataset.level = 1;
-      h.innerHTML = `Questions posées dans d'autres thématiques et concernant aussi ce chapitre
-        <span>${extra.length} question${extra.length>1?'s':''} · une question déjà renseignée est verrouillée ici et se modifie là où elle a été répondue</span>`;
-      body.appendChild(h);
-      renderRootList(extra, body, {titles:false});
-    }
+    // (sans intitulé : elles suivent directement celles de la thématique)
+    if(extra.length) renderRootList(extra, body, {titles:false});
   } else {
     // Par chapitre BPP : toutes les questions concernant ce chapitre, dans l'ordre du référentiel
     renderRootList(ROOT_QUESTIONS.filter(r=>r.bppChap.has(group.bppChap)), body);
@@ -1731,10 +1734,19 @@ function applyExclusion(card, q){
       note.className = 'excluded-note';
       card.insertBefore(note, card.firstChild);
     }
+    const auto = ex.reponse === 'non' || ex.reponse === 'na';
     note.innerHTML = `<span class="bar-ic"><svg><use href="#ic-na"/></svg></span>
-      <span>Sans objet : <strong>${escapeHtml(ex.dep.code)}</strong> a été répondue « ${escapeHtml(RESPONSE_LABELS[ex.reponse] || ex.reponse)} »</span>`;
+      <span>${auto ? 'Réponse automatique « ' + escapeHtml(RESPONSE_LABELS[ex.reponse]) + ' »' : 'Sans objet'} :
+        <strong>${escapeHtml(ex.dep.code)}</strong> a été répondue « ${escapeHtml(RESPONSE_LABELS[ex.reponse] || ex.reponse)} »</span>`;
   } else if(note){
     note.remove();
+  }
+  // bouton coché : réponse déduite pour une question sans objet, sinon réponse saisie
+  if(card.classList.contains('qcard')){
+    const shown = ex ? effReponse(q) : (qState(q.id) || {}).reponse;
+    card.querySelectorAll('.answers input').forEach(r=>{ r.checked = r.value === shown; });
+    if(shown) card.dataset.reponse = shown; else delete card.dataset.reponse;
+    card.classList.toggle('answered', !!shown);
   }
   if(card.classList.contains('qcard')){
     const st = qState(q.id) || {};
@@ -2043,8 +2055,10 @@ function renderAnalysis(){
   body.innerHTML = '';
   let lastChapter = null;
 
-  visibleQuestions().forEach(q=>{
-    const st = qState(q.id);
+  statQuestions().forEach(q=>{
+    const derived = derivedOf(q);
+    // réponse déduite : on affiche la réponse héritée ; la qualification se fait sur la question maître
+    const st = derived ? Object.assign(defaultQState(), qState(q.id), {reponse: derived.reponse}) : qState(q.id);
 
     if(q.chapterNum !== lastChapter){
       lastChapter = q.chapterNum;
@@ -2058,7 +2072,8 @@ function renderAnalysis(){
     tr.className = 'row-' + (st.reponse || 'vide');
 
     const pillClass = st.reponse ? 'pill-'+st.reponse : 'pill-vide';
-    const pillLabel = st.reponse ? RESPONSE_LABELS[st.reponse] : '—';
+    const pillLabel = (st.reponse ? RESPONSE_LABELS[st.reponse] : '—') + (derived ? ' (auto)' : '');
+    const followCell = derived ? `<span class="cell-empty">Voir ${escapeHtml(derived.dep.code)}</span>` : null;
 
     let critCell = '<span class="cell-empty">—</span>';
     if(st.reponse === 'non'){
@@ -2115,9 +2130,9 @@ function renderAnalysis(){
       <td class="qtext-cell">${q.depth>0?'&#8627; ':''}${q.partStem?'<span class="muted">'+escapeHtml(q.partStem)+'</span> ':''}${escapeHtml(q.question)}</td>
       <td>${escapeHtml((q.refs&&q.refs.length?q.refs:[q.ref||'']).join(', '))}</td>
       <td><span class="pill ${pillClass}">${pillLabel}</span></td>
-      <td>${critCell}</td>
-      <td>${riskCell}</td>
-      <td>${actionCell}</td>
+      <td>${followCell || critCell}</td>
+      <td>${followCell || riskCell}</td>
+      <td>${followCell || actionCell}</td>
       <td>${commentCell}</td>
       <td>${proofText}</td>
     `;
@@ -2150,8 +2165,9 @@ function exportCsv(){
   if(isExpert) headers.push('Criticité','Risque maîtrisé','Action');
   headers.push('Commentaire','Preuve');
   const rows = [headers];
-  visibleQuestions().forEach(q=>{
-    const st = qState(q.id);
+  statQuestions().forEach(q=>{
+    const derived = derivedOf(q);
+    const st = derived ? Object.assign(defaultQState(), qState(q.id), {reponse: derived.reponse, criticite: effCriticite(q)}) : qState(q.id);
     const row = [
       q.code,
       q.chapterNum + ' - ' + displayTitle(q.chapterTitle),
@@ -2159,7 +2175,7 @@ function exportCsv(){
       q.sectionTitle,
       (q.depth>0?'↳ ':'') + fullQuestionText(q),
       (q.refs&&q.refs.length?q.refs:[q.ref||'']).join(', '),
-      st.reponse ? RESPONSE_LABELS[st.reponse] : '',
+      st.reponse ? RESPONSE_LABELS[st.reponse] + (derived ? ' (automatique, ' + derived.dep.code + ')' : '') : '',
     ];
     if(isExpert){
       row.push(
@@ -2198,12 +2214,12 @@ function barColor(pct){
 function computeScore(questions){
   let points = 0, applicable = 0, answered = 0;
   questions.forEach(q=>{
-    const st = qState(q.id);
-    if(st.reponse){
+    const r = effReponse(q);
+    if(r){
       answered++;
-      if(st.reponse !== 'na'){
+      if(r !== 'na'){
         applicable++;
-        points += RESPONSE_POINTS[st.reponse];
+        points += RESPONSE_POINTS[r];
       }
     }
   });
@@ -2212,19 +2228,18 @@ function computeScore(questions){
 }
 
 function renderStats(){
-  const visible = visibleQuestions();
+  const visible = statQuestions();
   const globalScore = computeScore(visible);
 
   const counts = {oui:0, non:0, partiel:0, na:0, vide:0};
   visible.forEach(q=>{
-    const r = qState(q.id).reponse;
-    counts[r || 'vide']++;
+    counts[effReponse(q) || 'vide']++;
   });
   const critCounts = {mineure:0, majeure:0, critique:0, nonclassee:0};
   visible.forEach(q=>{
-    const st = qState(q.id);
-    if(st.reponse === 'non'){
-      if(st.criticite) critCounts[st.criticite]++;
+    if(effReponse(q) === 'non'){
+      const c = effCriticite(q);
+      if(c) critCounts[c]++;
       else critCounts.nonclassee++;
     }
   });
