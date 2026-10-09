@@ -235,8 +235,6 @@
   .locked-note{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12.5px;color:var(--gray);
     background:#fff;border:1px dashed var(--border);border-radius:10px;padding:6px 10px;margin:0 0 10px;}
   .locked-note .btn{margin-left:auto;}
-  h2.extra-title{font-size:15px;color:var(--fuchsia);margin:30px 0 4px;padding-top:18px;border-top:2px solid var(--border);}
-  h2.extra-title span{display:block;font-size:12px;font-weight:500;color:var(--text-light);margin-top:2px;}
 
   /* sous-questions imbriquées (chapeau + enfants) */
   .qchildren{margin:8px 0 12px 34px;padding-left:14px;border-left:2px solid var(--bg-soft-2);}
@@ -1490,15 +1488,8 @@ function renderQuestionnaire(){
     renderSectionBody(group.section, body, 1);
     // questions qui concernent aussi ce chapitre mais sont rangées dans une autre thématique
     const extra = group.chap ? ROOT_QUESTIONS.filter(r=>r.chapterNum !== group.themeNum && r.bppChap.has(group.chap)) : [];
-    if(extra.length){
-      const h = document.createElement('h2');
-      h.className = 'extra-title';
-      h.dataset.level = 1;
-      h.innerHTML = `Questions posées dans d'autres thématiques et concernant aussi ce chapitre
-        <span>${extra.length} question${extra.length>1?'s':''} · une question déjà renseignée est verrouillée ici et se modifie là où elle a été répondue</span>`;
-      body.appendChild(h);
-      renderRootList(extra, body, {titles:false});
-    }
+    // (sans intitulé : elles suivent directement celles de la thématique)
+    if(extra.length) renderRootList(extra, body, {titles:false});
   } else {
     // Par chapitre BPP : toutes les questions concernant ce chapitre, dans l'ordre du référentiel
     renderRootList(ROOT_QUESTIONS.filter(r=>r.bppChap.has(group.bppChap)), body);
