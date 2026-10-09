@@ -87,12 +87,17 @@ def _met(reponse, expected):
     return reponse == expected or (expected == "oui" and reponse == "partiel")
 
 
-def fill(evaluation_id: int, user_id: int, centre: str, upload_dir: str, seed=None) -> dict:
+def fill(evaluation_id: int, user_id: int, centre: str, upload_dir: str, seed=None, profil: str = "contraste") -> dict:
+    """profil « contraste » : niveaux de conformité très variables d'une thématique à l'autre.
+    profil « bon » : établissement globalement conforme, peu d'écarts graves — les questions maîtres
+    sont « Oui » (pas de « Non » en cascade), les exigences critiques quasi toujours conformes (au pire
+    partielles), les non-conformités portent surtout sur des exigences mineures."""
     rnd = random.Random(seed)
+    bon = profil == "bon"
     sections = {s["id"]: s for s in fetch_all("SELECT id, parent_id FROM sections")}
     questions = fetch_all(
         "SELECT id, code, section_id, parent_question_id AS parent, depends_on_question_id AS dep, "
-        "depends_on_value AS dep_val, is_part, question FROM questions ORDER BY sort_order"
+        "depends_on_value AS dep_val, is_part, question, severite FROM questions ORDER BY sort_order"
     )
 
     def top(sid):
@@ -100,7 +105,8 @@ def fill(evaluation_id: int, user_id: int, centre: str, upload_dir: str, seed=No
             sid = sections[sid]["parent_id"]
         return sid
     # niveau de conformité propre à chaque thématique (statistiques contrastées)
-    level = {sid: rnd.uniform(0.45, 0.92) for sid in sections if not sections[sid]["parent_id"]}
+    level = {sid: (rnd.uniform(0.84, 0.96) if bon else rnd.uniform(0.45, 0.92))
+             for sid in sections if not sections[sid]["parent_id"]}
 
     answers, visible = {}, {}
     by_id = {q["id"]: q for q in questions}
@@ -122,13 +128,18 @@ def fill(evaluation_id: int, user_id: int, centre: str, upload_dir: str, seed=No
         if not ok or q["is_part"]:
             continue
         p = level[top(q["section_id"])]
+        sev = q["severite"] or "mineur"
         # question déclencheuse (d'autres en dépendent) : plutôt « oui » pour déployer le questionnaire
         if q["id"] in triggers:
-            p = max(p, 0.88)
+            p = max(p, 0.97 if bon else 0.88)
+        if bon and sev == "critique":
+            p = max(p, 0.985)
         r = rnd.random()
         if r < p:
             rep = "oui"
-        elif r < p + (1 - p) * 0.45:
+        elif bon and (q["id"] in triggers or sev == "critique"):
+            rep = "partiel"  # jamais de « Non » sur une question maître ou une exigence critique
+        elif r < p + (1 - p) * (0.6 if bon and sev == "majeur" else 0.45):
             rep = "partiel"
         elif r < p + (1 - p) * 0.88:
             rep = "non"
@@ -143,7 +154,8 @@ def fill(evaluation_id: int, user_id: int, centre: str, upload_dir: str, seed=No
         criticite = risque = None
         action = ""
         if rep == "non":
-            criticite = rnd.choices(["mineure", "majeure", "critique"], weights=[50, 35, 15])[0] if rnd.random() < 0.85 else None
+            weights = {"mineur": [85, 15, 0], "majeur": [40, 55, 5], "critique": [10, 50, 40]}[sev] if bon else [50, 35, 15]
+            criticite = rnd.choices(["mineure", "majeure", "critique"], weights=weights)[0] if rnd.random() < 0.85 else None
             action = rnd.choice(ACTIONS) if criticite or rnd.random() < 0.3 else ""
         elif rep == "partiel":
             risque = rnd.choice(["oui", "non"]) if rnd.random() < 0.85 else None
