@@ -442,6 +442,7 @@
   /* ===== Avis d'expert ===== */
   .avis-kicker{font-size:12px;font-weight:700;color:var(--fuchsia);text-transform:uppercase;letter-spacing:.05em;}
   .avis-title{margin:2px 0 16px;font-size:24px;}
+  .avis-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;}
   .avis-global{display:flex;align-items:center;gap:16px;border-radius:var(--radius);padding:20px 24px;color:#fff;margin-bottom:16px;box-shadow:var(--shadow);}
   .avis-global .ic{font-size:30px;line-height:1;}
   .avis-global .h{font-size:19px;font-weight:800;}
@@ -880,8 +881,11 @@
     </section>
 
     <section id="tab-expert" class="tab-panel" style="display:none;">
-      <div class="avis-kicker">Synthèse pondérée par sévérité</div>
-      <h2 class="avis-title">Avis d'expert</h2>
+      <div class="avis-head">
+        <div><div class="avis-kicker">Synthèse pondérée par sévérité</div>
+          <h2 class="avis-title">Avis d'expert</h2></div>
+        <button type="button" class="btn primary" id="btnAuditReport" title="Ouvre le rapport mis en page ; « Enregistrer au format PDF » dans la fenêtre d'impression">&#128196; Générer le rapport d'audit (PDF)</button>
+      </div>
       <div id="avisGlobal"></div>
       <div class="avis-how">
         <strong>Comment ça marche :</strong> chaque question a reçu à l'avance un niveau de <strong>sévérité intrinsèque</strong>
@@ -2411,6 +2415,142 @@ function renderExpertOpinion(){
       <div class="k"><span>Critique NC : <b>${k.critNC}</b></span><span>Majeur NC : <b>${k.majNC}</b></span><span>Mineur NC : <b>${k.minNC}</b></span>
         <span>Critique partiel : <b>${k.critPC}</b></span><span>Majeur partiel : <b>${k.majPC}</b></span><span>Mineur partiel : <b>${k.minPC}</b></span></div></div>`).join('');
 }
+
+/* ======================= RAPPORT D'AUDIT ======================= */
+/* Rapport mis en page (logo SFPO, synthèse, verdicts, écarts détaillés, signatures), ouvert dans
+   une nouvelle fenêtre puis imprimé : « Enregistrer au format PDF » donne le document officiel. */
+function auditReportHtml(){
+  const visible = statQuestions();
+  const n = answerCounts(visible);
+  const score = computeScore(visible);
+  const chapters = BPP_CHAPTERS.map(c=>{
+    const qs = visible.filter(q=>q.bppChap.has(c.key));
+    return {c, qs, n: answerCounts(qs), k: avisOf(qs)};
+  }).filter(x=>x.qs.length);
+  const worst = chapters.reduce((m, x)=>AVIS_ORDER.indexOf(x.k.level) > AVIS_ORDER.indexOf(m) ? x.k.level : m, 'acceptable');
+  const ev = CURRENT_EVAL || {};
+  const done = ev.status === 'termine';
+  const today = new Date().toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'});
+  const author = ME ? (ME.nom || ME.login) : '';
+  const logo = new URL('assets/logo_sfpo.png', location.href).href;
+  const e = escapeHtml;
+  const SEV = {critique:'Critique', majeur:'Majeur', mineur:'Mineur'};
+  const rank = {critique:0, majeur:1, mineur:2};
+  const badge = lvl=>`<span class="lvl lvl-${lvl}">${AVIS_LEVELS[lvl].label}</span>`;
+
+  const chapterRows = chapters.map(({c, n: k, k: a})=>`<tr>
+    <td>${e(bppChapterLabel(c))}</td><td class="num">${k.done}/${k.total}</td>
+    <td class="num">${k.oui}</td><td class="num">${k.partiel}</td><td class="num">${k.non}</td><td class="num">${k.na}</td>
+    <td class="num">${a.critNC}</td><td class="num">${a.majNC}</td><td class="num">${a.minNC}</td><td class="num">${a.critPC}</td>
+    <td>${badge(a.level)}</td></tr>`).join('');
+
+  const details = chapters.map(({c, qs, k})=>{
+    const gaps = qs.filter(q=>['non','partiel'].includes(effReponse(q)));
+    if(!gaps.length) return '';
+    const direct = gaps.filter(q=>!derivedOf(q))
+      .sort((a, b)=>rank[severityOf(a)] - rank[severityOf(b)] || (effReponse(a) === 'non' ? 0 : 1) - (effReponse(b) === 'non' ? 0 : 1));
+    const auto = gaps.filter(q=>derivedOf(q));
+    const byMaster = {};
+    auto.forEach(q=>{ const m = derivedOf(q).dep.code; (byMaster[m] = byMaster[m] || []).push(q); });
+    return `<section class="chap">
+      <h3>${e(bppChapterLabel(c))} ${badge(k.level)}</h3>
+      ${direct.length ? `<table class="gaps"><thead><tr><th>N°</th><th>Exigence</th><th>Réf. BPP</th><th>Réponse</th><th>Sévérité</th><th>Criticité (expert)</th><th>Action corrective</th></tr></thead><tbody>
+        ${direct.map(q=>{ const st = qState(q.id) || {}; const r = effReponse(q); return `<tr>
+          <td class="code">${e(q.code)}</td><td>${e(fullQuestionText(q))}${st.comment_actif && st.commentaire ? `<div class="cm">Commentaire : ${e(st.commentaire)}</div>` : ''}</td>
+          <td>${e((q.refs && q.refs.length ? q.refs : [q.ref || '']).join(', '))}</td>
+          <td class="${r === 'non' ? 'nc' : 'pc'}">${r === 'non' ? 'Non conforme' : 'Partiel'}</td>
+          <td>${SEV[severityOf(q)]}</td><td>${st.criticite ? e(criticiteLabel(st.criticite)) : (r === 'partiel' && st.risque_maitrise ? (st.risque_maitrise === 'oui' ? 'Risque maîtrisé' : 'Risque non maîtrisé') : '—')}</td>
+          <td>${e(st.action || '') || '—'}</td></tr>`; }).join('')}</tbody></table>` : ''}
+      ${auto.length ? `<p class="auto"><strong>${auto.length} exigence${auto.length>1?'s':''} non satisfaite${auto.length>1?'s':''} par voie de conséquence</strong>
+        (question maître répondue « Non ») :<br>${Object.entries(byMaster).map(([m, l])=>`<span>${e(m)} → ${l.map(q=>e(q.code)).join(', ')}</span>`).join('<br>')}</p>` : ''}
+    </section>`;
+  }).join('');
+
+  return `<!doctype html><html lang="fr"><head><meta charset="utf-8">
+  <title>Rapport d'audit BPP — ${e(ev.centre_libelle || 'Sans centre')} — ${today}</title>
+  <style>
+    @page{size:A4;margin:16mm 14mm 18mm;
+      @bottom-left{content:"SFPO · Rapport d'audit BPP · ${(ev.centre_libelle || 'Sans centre').replace(/["\\<>]/g, '')} · Confidentiel";font:8pt Arial,sans-serif;color:#666;}
+      @bottom-right{content:"Page " counter(page) " / " counter(pages);font:8pt Arial,sans-serif;color:#666;}}
+    *{box-sizing:border-box;} body{font:10pt/1.45 Arial,Helvetica,sans-serif;color:#1c2126;margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .wrap{max-width:190mm;margin:0 auto;padding:10px;}
+    .head{display:flex;align-items:center;gap:18px;border-bottom:3px solid #A22E7D;padding-bottom:12px;margin-bottom:16px;}
+    .head img{height:62px;} .head .t1{font-size:17pt;font-weight:700;color:#0f4258;} .head .t2{color:#A22E7D;font-weight:700;font-size:10.5pt;}
+    .draft{border:2px solid #c25700;color:#c25700;font-weight:700;text-align:center;padding:6px;margin-bottom:12px;}
+    table{width:100%;border-collapse:collapse;margin:6px 0 14px;} th,td{border:1px solid #c7cfd8;padding:4px 6px;vertical-align:top;text-align:left;}
+    th{background:#0f4258;color:#fff;font-size:8.5pt;} td{font-size:9pt;} td.num{text-align:center;} td.code{font-weight:700;white-space:nowrap;}
+    table.id td:first-child{width:38%;font-weight:700;background:#eef1f4;}
+    h2{font-size:12.5pt;color:#0f4258;border-bottom:1px solid #c7cfd8;padding-bottom:3px;margin:20px 0 8px;page-break-after:avoid;}
+    h3{font-size:11pt;margin:14px 0 6px;page-break-after:avoid;display:flex;align-items:center;gap:8px;}
+    .verdict{border-radius:6px;color:#fff;padding:12px 16px;margin:8px 0 12px;} .verdict b{font-size:13pt;display:block;}
+    .lvl{display:inline-block;color:#fff;border-radius:10px;padding:1px 9px;font-size:8.5pt;font-weight:700;}
+    .lvl-acceptable{background:#256029;} .lvl-mineur{background:#a07a00;} .lvl-majeur{background:#c25700;} .lvl-critique{background:#b32020;}
+    .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:8px;} .kpis div{border:1px solid #c7cfd8;border-radius:5px;padding:6px;text-align:center;}
+    .kpis b{display:block;font-size:14pt;} .kpis span{font-size:8pt;color:#48525c;}
+    td.nc{color:#b32020;font-weight:700;} td.pc{color:#c25700;font-weight:700;} .cm{font-size:8pt;color:#48525c;margin-top:2px;}
+    .auto{font-size:8.5pt;color:#48525c;background:#f6f7f9;border-left:3px solid #b32020;padding:6px 8px;}
+    .method{font-size:8.5pt;color:#48525c;} .chap{page-break-inside:auto;} tr{page-break-inside:avoid;}
+    .sign{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px;page-break-inside:avoid;} .sign div{border:1px solid #c7cfd8;border-radius:5px;padding:8px 10px;height:34mm;font-size:9pt;}
+    .noprint{text-align:center;margin:10px 0;} @media print{.noprint{display:none;}}
+    .noprint button{font:inherit;padding:8px 16px;border-radius:20px;border:none;background:#0f4258;color:#fff;cursor:pointer;}
+  </style></head><body><div class="wrap">
+  <div class="noprint"><button onclick="window.print()">Imprimer / Enregistrer en PDF</button></div>
+  <div class="head"><img src="${logo}" alt="SFPO">
+    <div><div class="t1">Rapport d'audit — Bonnes Pratiques de Préparation</div>
+      <div class="t2">Auto-évaluation au regard des BPP (ANSM 2023) · Synthèse pondérée par sévérité</div></div></div>
+  ${done ? '' : '<div class="draft">RAPPORT PROVISOIRE — questionnaire en cours, non clôturé</div>'}
+  <table class="id"><tbody>
+    <tr><td>Établissement</td><td>${e(ev.centre_libelle || 'Sans centre (questionnaire historique)')}</td></tr>
+    <tr><td>Questionnaire</td><td>${e(ev.label || '')} · ouvert le ${fmtDate(ev.created_at)}</td></tr>
+    <tr><td>Statut</td><td>${done ? 'Terminé le ' + fmtDate(ev.completed_at) : 'En cours'}</td></tr>
+    <tr><td>Référentiel</td><td>Bonnes Pratiques de Préparation (ANSM 2023) — référentiel d'auto-évaluation SFPO</td></tr>
+    <tr><td>Rapport établi le</td><td>${today}${author ? ' par ' + e(author) : ''}</td></tr>
+  </tbody></table>
+
+  <h2>1. Conclusion générale</h2>
+  <div class="verdict lvl-${worst}"><b>Niveau de risque global : ${AVIS_LEVELS[worst].label}</b>${e(AVIS_LEVELS[worst].text)}</div>
+  <div class="kpis">
+    <div><b>${n.done}/${n.total}</b><span>questions répondues</span></div>
+    <div><b>${score.pct !== null ? score.pct + ' %' : '—'}</b><span>score de conformité</span></div>
+    <div><b style="color:#256029">${n.oui}</b><span>conformes</span></div>
+    <div><b style="color:#c25700">${n.partiel}</b><span>partiels</span></div>
+    <div><b style="color:#b32020">${n.non}</b><span>non conformes</span></div>
+    <div><b style="color:#5b636b">${n.na}</b><span>non applicables</span></div>
+  </div>
+
+  <h2>2. Verdict par chapitre BPP</h2>
+  <table><thead><tr><th>Chapitre</th><th>Répondues</th><th>C</th><th>PC</th><th>NC</th><th>NA</th><th>Crit. NC</th><th>Maj. NC</th><th>Min. NC</th><th>Crit. PC</th><th>Verdict</th></tr></thead>
+    <tbody>${chapterRows}</tbody></table>
+
+  <h2>3. Écarts constatés par chapitre</h2>
+  ${details || '<p>Aucun écart (non-conformité ou conformité partielle) constaté sur les questions répondues.</p>'}
+
+  <h2>4. Méthodologie</h2>
+  <p class="method">Chaque exigence du référentiel porte un niveau de sévérité intrinsèque (Mineur / Majeur / Critique), identique pour tous les établissements,
+    selon l'impact potentiel d'un écart sur la sécurité du patient, du personnel ou du produit. Pondération des réponses : Non conforme = 1 ;
+    Partiellement conforme = 0,5 ; Conforme et Non applicable = 0. Le verdict d'un chapitre correspond à la sévérité la plus élevée parmi ses écarts pondérés :
+    un écart Critique non conforme classe le chapitre en risque critique, un écart Critique partiel en risque majeur, un écart Majeur partiel en risque mineur.
+    Lorsqu'une question maître est répondue « Non » (ou « Non applicable »), les exigences qui en dépendent sont réputées non satisfaites (ou non applicables).
+    Une exigence citant plusieurs chapitres BPP est prise en compte dans chacun. Le score de conformité rapporte les points obtenus (Oui = 1, Partiel = 0,5)
+    aux exigences applicables répondues.</p>
+
+  <h2>5. Validation</h2>
+  <div class="sign"><div><b>Pour la SFPO — expert</b><br>Nom :<br>Date :<br>Signature :</div>
+    <div><b>Pour l'établissement — pharmacien responsable</b><br>Nom :<br>Date :<br>Signature :</div></div>
+  </div></body></html>`;
+}
+function openAuditReport(){
+  const w = window.open('', '_blank');
+  if(!w){ showToast("Fenêtre bloquée par le navigateur : autorisez les fenêtres surgissantes pour générer le rapport.", 'warn'); return; }
+  w.document.open();
+  w.document.write(auditReportHtml());
+  w.document.close();
+  // impression une fois le logo chargé
+  const img = w.document.querySelector('.head img');
+  const go = ()=>setTimeout(()=>w.print(), 150);
+  if(img && !img.complete){ img.onload = go; img.onerror = go; } else go();
+}
+document.getElementById('btnAuditReport').addEventListener('click', openAuditReport);
 
 function renderStats(){
   const visible = statQuestions();
