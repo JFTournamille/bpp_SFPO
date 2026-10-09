@@ -2654,7 +2654,7 @@ function renderDashboard(){
         ${e.completed_at ? `<div class="muted">le ${fmtDate(e.completed_at)}</div>` : ''}</td>
       <td><div class="mini-progress"><div class="track"><div style="width:${pct}%"></div></div>
         <span title="Réponses saisies / questions de base (hors conditionnelles)">${e.answered}/${base}</span></div></td>
-      <td>${e.non_conformes}${e.a_qualifier ? ` <span class="muted">(${e.a_qualifier} à qualifier)</span>` : ''}</td>
+      <td><span title="${e.non_conformes_auto ? 'dont ' + e.non_conformes_auto + ' automatique(s) (question maître à « Non »)' : ''}">${e.non_conformes}</span>${e.a_qualifier ? ` <span class="muted">(${e.a_qualifier} à qualifier)</span>` : ''}</td>
       <td>${e.membres}</td>
       <td>${fmtDate(e.last_activity, true)}</td>
       <td class="actions">
