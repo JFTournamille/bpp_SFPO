@@ -12,13 +12,20 @@ décrit une ligne par titre ou question, avec niveaux et liens explicites. Le sc
 La migration refuse de s'appliquer si la base n'est pas dans la version à laquelle se rapporte
 la colonne « Ancien code » (cellule « « Ancien code » se rapporte à la version »), pour éviter
 d'appliquer deux fois une renumérotation.
+
+Sévérité intrinsèque (critique / majeur / mineur) : colonne « Sévérité » de la feuille
+« Référentiel » si elle existe, sinon grille referentiel/grille_severite.csv (code;sévérité;motif).
 """
+import csv
+import os
 import re
 import sys
 
 import openpyxl
 
 TYPES = {"Titre", "Question", "Intitulé commun"}
+SEVERITES = {"critique", "majeur", "mineur"}
+GRILLE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "referentiel", "grille_severite.csv")
 
 
 def q(s):
@@ -43,6 +50,12 @@ def main(path):
         if ref:
             texts[str(ref).strip()] = (texte or "").strip()
 
+    header = [str(v or "").strip() for v in next(wb["Référentiel"].iter_rows(max_row=1, values_only=True))]
+    col_sev = header.index("Sévérité") if "Sévérité" in header else None
+    grille = {}
+    if col_sev is None and os.path.exists(GRILLE):
+        with open(GRILLE, encoding="utf-8") as f:
+            grille = {r["code"]: r["severite"] for r in csv.DictReader(f, delimiter=";")}
     rows = [r for r in wb["Référentiel"].iter_rows(min_row=2, values_only=True) if any(v is not None for v in r[:10])]
     errors, sections, questions = [], [], []
     stack = []  # (niveau, id de section)
@@ -93,9 +106,14 @@ def main(path):
             if not texts.get(ref):
                 errors.append(f"ligne {i} : référence {ref} sans texte dans « Références BPP » ({code})")
         anciens = [x.strip() for x in str(ancien or "").split(",") if x.strip()]
+        sev = r[col_sev] if col_sev is not None and col_sev < len(r) else grille.get(code)
+        sev = str(sev).strip().lower() if sev else None
+        if sev and sev not in SEVERITES:
+            errors.append(f"ligne {i} : sévérité « {sev} » (critique, majeur ou mineur attendu) ({code})")
+            sev = None
         questions.append(dict(code=code, section=stack[-1][1], chapeau=chapeau, texte=intitule,
                               refs=ref_list, cond_q=cond_q, cond_r=cond_r, part=(typ == "Intitulé commun"),
-                              anciens=anciens))
+                              anciens=anciens, sev=sev))
     if errors:
         sys.stderr.write("Référentiel non importé :\n  " + "\n  ".join(errors) + "\n")
         sys.exit(1)
@@ -142,6 +160,7 @@ DELETE FROM responses WHERE question_id NOT LIKE '~%';  -- questions supprimées
 UPDATE responses SET question_id = substr(question_id, 2);""")
     out("")
     out("-- Sections et questions")
+    out("ALTER TABLE questions ADD COLUMN IF NOT EXISTS severite TEXT;")
     out("DELETE FROM questions;")
     out("DELETE FROM sections;")
     for k in range(0, len(sections), 100):
@@ -151,13 +170,13 @@ UPDATE responses SET question_id = substr(question_id, 2);""")
     out("SELECT setval(pg_get_serial_sequence('sections', 'id'), (SELECT MAX(id) FROM sections));")
     for k in range(0, len(questions), 100):
         out("INSERT INTO questions (id, code, section_id, parent_question_id, question, ref, ref_text, refs, "
-            "depends_on_question_id, depends_on_value, is_part, sort_order) VALUES")
+            "depends_on_question_id, depends_on_value, is_part, sort_order, severite) VALUES")
         vals = []
         for n, qq in enumerate(questions[k:k + 100], k + 1):
             first = qq["refs"][0] if qq["refs"] else None
             vals.append(f"({q(qq['code'])}, {q(qq['code'])}, {qq['section']}, NULL, {q(qq['texte'])}, {q(first)}, "
                         f"NULL, {q(', '.join(qq['refs']))}, NULL, NULL, "
-                        f"{'TRUE' if qq['part'] else 'FALSE'}, {n})")
+                        f"{'TRUE' if qq['part'] else 'FALSE'}, {n}, {q(qq['sev'])})")
         out(",\n".join(vals) + ";")
     out("UPDATE questions q SET ref_text = t.texte FROM ref_texts t WHERE t.ref = q.ref;")
     links = [qq for qq in questions if qq["chapeau"] or qq["cond_q"]]

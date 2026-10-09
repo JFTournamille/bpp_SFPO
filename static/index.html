@@ -411,6 +411,51 @@
   .bar-row .btrack{flex:1;height:18px;background:var(--bg-soft-2);border-radius:var(--radius-pill);overflow:hidden;position:relative;}
   .bar-row .bfill{height:100%;border-radius:var(--radius-pill);}
   .bar-row .bscore{width:52px;flex:none;text-align:right;font-size:12.5px;font-weight:700;}
+  /* ===== Statistiques : synthèse et chapitres BPP ===== */
+  .ov-top{display:grid;grid-template-columns:minmax(260px,1.4fr) repeat(4,minmax(120px,1fr));gap:14px;margin-bottom:12px;}
+  .ov-hero{display:flex;align-items:center;gap:18px;border-radius:var(--radius);padding:18px 22px;color:#fff;
+    background:linear-gradient(120deg,#2c5f98 0%,#5b3f8e 55%,#8e2c72 100%);box-shadow:var(--shadow);}
+  .ov-hero .big{font-size:30px;font-weight:800;line-height:1;}
+  .ov-hero .lbl{font-size:13px;opacity:.9;margin-top:6px;}
+  .ov-count{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;}
+  .ov-count .big{font-size:28px;font-weight:800;line-height:1;}
+  .ov-count .lbl{font-size:12.5px;font-weight:600;color:var(--text-light);margin-top:8px;}
+  .ring{flex:none;}
+  .ring text{font-family:inherit;font-weight:800;}
+  .chap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;}
+  .chap-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;display:flex;gap:14px;}
+  .chap-card .body{flex:1;min-width:0;}
+  .chap-card .t{font-size:13.5px;font-weight:700;color:var(--text);line-height:1.3;}
+  .chap-card .n{font-size:12px;color:var(--text-light);margin:3px 0 8px;}
+  .stack{display:flex;height:8px;border-radius:var(--radius-pill);overflow:hidden;background:var(--bg-soft-2);}
+  .stack > div{height:100%;}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px;}
+  .chip{font-size:11px;font-weight:700;border-radius:var(--radius-pill);padding:2px 8px;}
+  .chip.c{background:var(--green-bg);color:var(--green);} .chip.pc{background:var(--orange-bg);color:var(--orange);}
+  .chip.nc{background:var(--red-bg);color:var(--red);} .chip.na{background:var(--gray-bg);color:var(--gray);}
+  .chip.zero{opacity:.45;}
+  .watch-item{border-top:1px solid var(--border);padding:10px 0;}
+  .watch-item:first-child{border-top:none;padding-top:0;}
+  .watch-item .h{display:flex;justify-content:space-between;gap:10px;font-weight:700;font-size:13.5px;}
+  .watch-item ul{margin:6px 0 0;padding-left:18px;font-size:12.5px;color:var(--text-light);}
+  .watch-item li strong{color:var(--text);}
+  /* ===== Avis d'expert ===== */
+  .avis-kicker{font-size:12px;font-weight:700;color:var(--fuchsia);text-transform:uppercase;letter-spacing:.05em;}
+  .avis-title{margin:2px 0 16px;font-size:24px;}
+  .avis-global{display:flex;align-items:center;gap:16px;border-radius:var(--radius);padding:20px 24px;color:#fff;margin-bottom:16px;box-shadow:var(--shadow);}
+  .avis-global .ic{font-size:30px;line-height:1;}
+  .avis-global .h{font-size:19px;font-weight:800;}
+  .avis-global .s{font-size:13px;opacity:.92;margin-top:2px;}
+  .lvl-acceptable{background:var(--green);} .lvl-mineur{background:#c99a00;} .lvl-majeur{background:var(--orange);} .lvl-critique{background:var(--red);}
+  .avis-how{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;font-size:12.5px;line-height:1.55;color:var(--text-light);margin-bottom:20px;}
+  .avis-how strong{color:var(--text);}
+  .avis-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;}
+  .avis-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;}
+  .avis-card .badge{display:inline-block;font-size:11px;font-weight:800;color:#fff;border-radius:var(--radius-pill);padding:2px 10px;margin-bottom:8px;}
+  .avis-card .t{font-size:13.5px;font-weight:700;color:var(--text);line-height:1.3;margin-bottom:8px;}
+  .avis-card .k{display:flex;flex-wrap:wrap;gap:3px 12px;font-size:12px;color:var(--text-light);}
+  .avis-card .k b{color:var(--text);}
+  @media (max-width:900px){ .ov-top{grid-template-columns:1fr 1fr;} .ov-hero{grid-column:1/-1;} }
   .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--text-light);margin-top:6px;}
   .legend span{display:inline-flex;align-items:center;gap:5px;}
   .legend .dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
@@ -631,6 +676,7 @@
     <button type="button" class="tab-btn active" data-tab="questionnaire">Auto-évaluation</button>
     <button type="button" class="tab-btn" data-tab="analysis">Analyse &amp; Expertise</button>
     <button type="button" class="tab-btn" data-tab="stats">Statistiques</button>
+    <button type="button" class="tab-btn" data-tab="expert">Avis d'expert</button>
   </div>
 </nav>
 
@@ -797,6 +843,22 @@
     </section>
 
     <section id="tab-stats" class="tab-panel" style="display:none;">
+      <div class="ov-top" id="statsOverview"></div>
+      <div class="legend" style="margin-bottom:22px;">
+        <span><span class="dot" style="background:var(--green)"></span> Conforme</span>
+        <span><span class="dot" style="background:var(--orange)"></span> Partiellement conforme</span>
+        <span><span class="dot" style="background:var(--red)"></span> Non conforme</span>
+        <span><span class="dot" style="background:var(--gray)"></span> Non applicable</span>
+        <span><span class="dot" style="background:var(--bg-soft-2)"></span> Non répondu</span>
+      </div>
+      <div class="panel">
+        <h3>Taux de remplissage par chapitre BPP</h3>
+        <div class="chap-grid" id="statsChapters"></div>
+      </div>
+      <div class="panel">
+        <h3>&#9888;&#65039; Chapitres à surveiller (non-conformités)</h3>
+        <div id="statsWatch"></div>
+      </div>
       <div class="stats-grid" id="statsCards"></div>
       <div class="panel">
         <h3>Score de conformité par thématique</h3>
@@ -814,6 +876,26 @@
       <div class="panel">
         <h3>Non-conformités par criticité</h3>
         <div id="statsCriticite"></div>
+      </div>
+    </section>
+
+    <section id="tab-expert" class="tab-panel" style="display:none;">
+      <div class="avis-kicker">Synthèse pondérée par sévérité</div>
+      <h2 class="avis-title">Avis d'expert</h2>
+      <div id="avisGlobal"></div>
+      <div class="avis-how">
+        <strong>Comment ça marche :</strong> chaque question a reçu à l'avance un niveau de <strong>sévérité intrinsèque</strong>
+        (Mineur / Majeur / Critique) selon l'impact potentiel d'un écart sur la sécurité du patient, du personnel ou du produit.
+        Cette grille ne dépend pas de l'auditeur : elle est la même pour tous les centres.
+        Chaque réponse pèse selon sa nature : <strong>Non conforme</strong> = poids plein, <strong>Partiellement conforme</strong> = poids à moitié,
+        <strong>Conforme</strong> et <strong>Non applicable</strong> = aucun poids. Les réponses automatiques (question maître à « Non » ou « N/A ») sont incluses.
+        Le verdict de chaque chapitre suit la sévérité la plus élevée parmi les écarts pondérés (poids &gt; 0) : un seul écart Critique non conforme classe le chapitre en risque <strong>critique</strong> ;
+        un écart Critique seulement partiel le fait basculer en risque <strong>majeur</strong> (de même, Majeur partiel → <strong>mineur</strong>). Le Non applicable n'a aucun effet sur ce calcul.
+        Le niveau global est celui du chapitre le plus défavorable.
+      </div>
+      <div class="panel">
+        <h3>Verdict par chapitre BPP</h3>
+        <div class="avis-grid" id="avisChapters"></div>
       </div>
     </section>
 
@@ -1263,7 +1345,7 @@ async function start(me){
 }
 
 function setEvaluationTabsEnabled(on){
-  ['questionnaire','analysis','stats'].forEach(t=>{
+  ['questionnaire','analysis','stats','expert'].forEach(t=>{
     const b = document.querySelector(`.tab-btn[data-tab="${t}"]`);
     b.disabled = !on;
     b.title = on ? '' : 'Ouvrez un questionnaire depuis le tableau de bord';
@@ -2227,8 +2309,106 @@ function computeScore(questions){
   return {pct, points, applicable, answered, total: questions.length};
 }
 
+/* Anneau de pourcentage (SVG) */
+function ringSvg(pct, size, color, track, textColor){
+  const r = size/2 - 6, c = 2*Math.PI*r, p = Math.max(0, Math.min(100, pct||0));
+  return `<svg class="ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true">
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${track}" stroke-width="7"/>
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="7" stroke-linecap="round"
+      stroke-dasharray="${c*p/100} ${c}" transform="rotate(-90 ${size/2} ${size/2})"/>
+    <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" font-size="${size/4.6}" fill="${textColor}">${Math.round(p)}%</text>
+  </svg>`;
+}
+/* Répartition des réponses effectives (réponses automatiques comprises) d'un ensemble de questions */
+function answerCounts(qs){
+  const n = {oui:0, partiel:0, non:0, na:0, vide:0};
+  qs.forEach(q=>{ n[effReponse(q) || 'vide']++; });
+  n.total = qs.length; n.done = n.total - n.vide;
+  return n;
+}
+function severityOf(q){ return (QUESTION_BY_ID[q.id] || q).severite || 'mineur'; }
+function bppChapterLabel(c){ return (/^\d+$/.test(c.key) ? 'Chapitre ' + c.key : c.key) + ' — ' + c.title.replace(/\s*-\s*LD\d$/, ''); }
+
+function renderStatsOverview(visible){
+  const n = answerCounts(visible);
+  const pct = n.total ? n.done/n.total*100 : 0;
+  document.getElementById('statsOverview').innerHTML = `
+    <div class="ov-hero">${ringSvg(pct, 96, '#fff', 'rgba(255,255,255,.25)', '#fff')}
+      <div><div class="big">${n.done}/${n.total}</div><div class="lbl">questions répondues, tous chapitres confondus</div></div></div>
+    <div class="ov-count"><div class="big" style="color:var(--green)">${n.oui}</div><div class="lbl">Conforme</div></div>
+    <div class="ov-count"><div class="big" style="color:var(--orange)">${n.partiel}</div><div class="lbl">Partiellement conforme</div></div>
+    <div class="ov-count"><div class="big" style="color:var(--red)">${n.non}</div><div class="lbl">Non conforme</div></div>
+    <div class="ov-count"><div class="big" style="color:var(--gray)">${n.na}</div><div class="lbl">Non applicable</div></div>`;
+
+  const chips = (k, cls, lbl)=>`<span class="chip ${cls}${k ? '' : ' zero'}">${k} ${lbl}</span>`;
+  document.getElementById('statsChapters').innerHTML = BPP_CHAPTERS.map(c=>{
+    const qs = visible.filter(q=>q.bppChap.has(c.key));
+    if(!qs.length) return '';
+    const k = answerCounts(qs);
+    const seg = (v, col)=> v ? `<div style="width:${v/k.total*100}%;background:${col}"></div>` : '';
+    return `<div class="chap-card">${ringSvg(k.total ? k.done/k.total*100 : 0, 64, 'var(--blue)', 'var(--bg-soft-2)', 'var(--text)')}
+      <div class="body"><div class="t">${escapeHtml(bppChapterLabel(c))}</div>
+        <div class="n">${k.done} / ${k.total} répondues</div>
+        <div class="stack">${seg(k.oui,'var(--green)')}${seg(k.partiel,'var(--orange)')}${seg(k.non,'var(--red)')}${seg(k.na,'var(--gray)')}</div>
+        <div class="chips">${chips(k.oui,'c','C')}${chips(k.partiel,'pc','PC')}${chips(k.non,'nc','NC')}${chips(k.na,'na','NA')}</div>
+      </div></div>`;
+  }).join('');
+
+  // chapitres à surveiller : non-conformités, les plus graves d'abord
+  const rank = {critique:0, majeur:1, mineur:2};
+  const watch = BPP_CHAPTERS.map(c=>{
+    const nc = visible.filter(q=>q.bppChap.has(c.key) && effReponse(q) === 'non')
+      .sort((a, b)=>rank[severityOf(a)] - rank[severityOf(b)] || a.order - b.order);
+    return {c, nc, crit: nc.filter(q=>severityOf(q) === 'critique').length, maj: nc.filter(q=>severityOf(q) === 'majeur').length};
+  }).filter(w=>w.nc.length).sort((a, b)=>b.crit - a.crit || b.maj - a.maj || b.nc.length - a.nc.length);
+  document.getElementById('statsWatch').innerHTML = watch.length ? watch.map(w=>`
+    <div class="watch-item"><div class="h"><span>${escapeHtml(bppChapterLabel(w.c))}</span>
+      <span style="color:var(--red)">${w.nc.length} NC · ${w.crit} critique${w.crit>1?'s':''} · ${w.maj} majeure${w.maj>1?'s':''}</span></div>
+      <ul>${w.nc.slice(0, 5).map(q=>`<li><strong>${escapeHtml(q.code)}</strong> (${severityOf(q)}${derivedOf(q) ? ', auto' : ''}) — ${escapeHtml(fullQuestionText(q))}</li>`).join('')}
+        ${w.nc.length > 5 ? `<li>… et ${w.nc.length - 5} autre${w.nc.length - 5 > 1 ? 's' : ''}</li>` : ''}</ul></div>`).join('')
+    : '<p class="empty-note">Aucune non-conformité enregistrée pour le moment.</p>';
+}
+
+/* Avis d'expert : verdict par chapitre BPP selon l'écart pondéré le plus grave */
+const AVIS_LEVELS = {
+  acceptable: {label:'Acceptable', ic:'&#9989;', text:'Aucune non-conformité significative identifiée sur les questions déjà répondues.'},
+  mineur:     {label:'Mineur', ic:'&#128993;', text:'Écarts mineurs ou partiels sur des exigences majeures : à corriger dans le cadre de l\'amélioration continue.'},
+  majeur:     {label:'Majeur', ic:'&#128992;', text:'Au moins un écart majeur non conforme ou critique partiel : plan d\'actions prioritaire.'},
+  critique:   {label:'Critique', ic:'&#9940;', text:'Au moins un écart critique non conforme : mesures immédiates nécessaires.'},
+};
+const AVIS_ORDER = ['acceptable', 'mineur', 'majeur', 'critique'];
+function avisOf(qs){
+  const k = {critNC:0, majNC:0, minNC:0, critPC:0, majPC:0, minPC:0};
+  qs.forEach(q=>{
+    const r = effReponse(q), s = severityOf(q);
+    if(r === 'non') k[{critique:'critNC', majeur:'majNC', mineur:'minNC'}[s]]++;
+    if(r === 'partiel') k[{critique:'critPC', majeur:'majPC', mineur:'minPC'}[s]]++;
+  });
+  // poids : NC = 1, partiel = 0,5, conforme et N/A = 0 ; un écart partiel descend d'un niveau (mineur au plus bas)
+  k.level = k.critNC ? 'critique' : (k.majNC || k.critPC) ? 'majeur' : (k.minNC || k.majPC || k.minPC) ? 'mineur' : 'acceptable';
+  return k;
+}
+function renderExpertOpinion(){
+  const visible = statQuestions();
+  const chapters = BPP_CHAPTERS.map(c=>({c, k: avisOf(visible.filter(q=>q.bppChap.has(c.key)))}))
+    .filter((x, i)=>visible.some(q=>q.bppChap.has(BPP_CHAPTERS[i].key)));
+  const worst = chapters.reduce((m, x)=>AVIS_ORDER.indexOf(x.k.level) > AVIS_ORDER.indexOf(m) ? x.k.level : m, 'acceptable');
+  const L = AVIS_LEVELS[worst];
+  const n = answerCounts(visible);
+  document.getElementById('avisGlobal').innerHTML = `
+    <div class="avis-global lvl-${worst}"><span class="ic">${L.ic}</span>
+      <div><div class="h">Niveau de risque global : ${L.label}</div>
+        <div class="s">${L.text} (${n.done}/${n.total} questions répondues)</div></div></div>`;
+  document.getElementById('avisChapters').innerHTML = chapters.map(({c, k})=>`
+    <div class="avis-card"><span class="badge lvl-${k.level}">${AVIS_LEVELS[k.level].label}</span>
+      <div class="t">${escapeHtml(bppChapterLabel(c))}</div>
+      <div class="k"><span>Critique NC : <b>${k.critNC}</b></span><span>Majeur NC : <b>${k.majNC}</b></span><span>Mineur NC : <b>${k.minNC}</b></span>
+        <span>Critique partiel : <b>${k.critPC}</b></span><span>Majeur partiel : <b>${k.majPC}</b></span><span>Mineur partiel : <b>${k.minPC}</b></span></div></div>`).join('');
+}
+
 function renderStats(){
   const visible = statQuestions();
+  renderStatsOverview(visible);
   const globalScore = computeScore(visible);
 
   const counts = {oui:0, non:0, partiel:0, na:0, vide:0};
@@ -2356,6 +2536,7 @@ function switchTab(name){
   updateStickyTop();
   if(name==='analysis') renderAnalysis();
   if(name==='stats') renderStats();
+  if(name==='expert') renderExpertOpinion();
 }
 document.querySelectorAll('.tab-btn').forEach(b=>{
   b.addEventListener('click', ()=>switchTab(b.dataset.tab));
