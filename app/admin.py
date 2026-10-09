@@ -37,6 +37,44 @@ WHERE NOT is_part AND id NOT IN (SELECT id FROM anc WHERE dep IS NOT NULL)
 """
 
 
+def _derived_reponses(questions, reponses):
+    """Réponses automatiques (même règle que l'interface, exclusionOf/derivedOf) : une question
+    sans objet parce que sa question maître (ou celle d'une question chapeau ou d'une dépendance)
+    a été répondue « Non » ou « N/A » prend cette réponse. Renvoie {question_id: 'non' | 'na'}."""
+    memo = {}
+
+    def met(rep, expected):
+        return rep == expected or (expected == "oui" and rep == "partiel")
+
+    def exclusion(qid, seen):
+        if qid in memo:
+            return memo[qid]
+        if qid in seen:
+            return None  # garde-fou contre les dépendances circulaires
+        seen = seen | {qid}
+        q = questions.get(qid)
+        res = None
+        if q and q["dep"] and q["dep"] != qid and q["dep"] in questions:
+            dep = questions[q["dep"]]
+            rep = None if dep["is_part"] else reponses.get(q["dep"])
+            if rep and not met(rep, q["dep_value"]):
+                res = rep
+            else:
+                res = exclusion(q["dep"], seen)
+        if res is None and q and q["parent"]:
+            res = exclusion(q["parent"], seen)
+        memo[qid] = res
+        return res
+
+    out = {}
+    for qid, q in questions.items():
+        if not q["is_part"]:
+            r = exclusion(qid, set())
+            if r in ("non", "na"):
+                out[qid] = r
+    return out
+
+
 @router.get("/dashboard")
 def dashboard():
     base = fetch_one(BASE_QUESTIONS_SQL)["n"]
@@ -56,6 +94,22 @@ def dashboard():
         ORDER BY e.status, COALESCE(MAX(r.updated_at), e.created_at) DESC
         """
     )
+    # non-conformités : réponses automatiques comprises (comme Statistiques et Avis d'expert) ;
+    # elles se qualifient sur leur question maître, d'où « à qualifier » inchangé
+    questions = {
+        r["id"]: {"dep": r["depends_on_question_id"], "dep_value": r["depends_on_value"],
+                  "parent": r["parent_question_id"], "is_part": r["is_part"]}
+        for r in fetch_all("SELECT id, depends_on_question_id, depends_on_value, parent_question_id, is_part FROM questions")
+    }
+    answers = {}
+    for r in fetch_all("SELECT evaluation_id, question_id, reponse FROM responses WHERE reponse IS NOT NULL"):
+        answers.setdefault(r["evaluation_id"], {})[r["question_id"]] = r["reponse"]
+    for e in rows:
+        reps = answers.get(e["id"], {})
+        derived = _derived_reponses(questions, reps)
+        effective = {**{k: v for k, v in reps.items() if k in questions and not questions[k]["is_part"]}, **derived}
+        e["non_conformes"] = sum(1 for v in effective.values() if v == "non")
+        e["non_conformes_auto"] = sum(1 for v in derived.values() if v == "non")
     return {"base_questions": base, "evaluations": rows}
 
 
