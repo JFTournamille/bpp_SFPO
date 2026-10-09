@@ -2817,7 +2817,7 @@ function renderDashboard(){
     const ev = DASH.evaluations.find(x=>x.id === +b.dataset.demo);
     const choix = prompt(`Remplir le questionnaire « ${ev && ev.centre_libelle || 'sans centre'} » avec des données FICTIVES de démonstration `
       + `(réponses, commentaires, preuves et pièces jointes, criticités, actions).\n\nProfil :\n`
-      + `  1 = bon niveau (peu d'écarts, quasi aucun écart critique)\n  2 = contrasté (niveaux très variables, nombreux écarts)\n\n`
+      + `  1 = intermédiaire (globalement conforme, quelques chapitres en écart critique)\n  2 = contrasté (niveaux très variables, nombreux écarts)\n\n`
       + `À réserver à un questionnaire de démonstration : « Réinitialiser » permet ensuite de tout effacer.`, '1');
     if(choix === null) return;
     const profil = String(choix).trim() === '2' ? 'contraste' : 'bon';
