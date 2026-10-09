@@ -187,7 +187,12 @@
   .side-item .bar{height:4px;border-radius:var(--radius-pill);background:rgba(255,255,255,.2);margin-top:8px;overflow:hidden;}
   .side-item .bar > div{height:100%;width:0;background:#fff;transition:width .25s ease;}
 
-  .group-head{margin-bottom:18px;}
+  /* en-tête du chapitre figé sous la barre de progression pendant le défilement */
+  .group-head{
+    position:sticky;top:calc(var(--sticky-top,90px) - 16px);z-index:30;
+    background:var(--page-bg);padding:12px 0 14px;margin:-12px 0 12px;
+    border-bottom:1px solid var(--border);
+  }
   .group-head .kicker{font-size:12.5px;font-weight:700;color:var(--fuchsia);text-transform:uppercase;letter-spacing:.05em;}
   .group-head h2{margin:2px 0 12px;font-size:24px;font-weight:700;color:var(--text);line-height:1.25;}
   .group-head .progress-row{margin:0;}
@@ -241,7 +246,7 @@
     padding:16px 18px;margin-bottom:12px;
     box-shadow:var(--shadow);
     transition:border-color .15s;
-    scroll-margin-top:var(--sticky-top,90px);
+    scroll-margin-top:calc(var(--sticky-top,90px) + var(--group-head-h,0px));
   }
   .qcard.answered{border-left:4px solid var(--blue);}
   .qcard[data-reponse="oui"]{border-left:4px solid var(--green);}
@@ -254,7 +259,7 @@
   /* ligne « PART » : partie initiale commune à plusieurs questions, sans réponse */
   .qpart{
     background:var(--bg-soft-2);border:1px dashed var(--border);border-radius:var(--radius);
-    padding:12px 18px;margin-bottom:12px;scroll-margin-top:var(--sticky-top,90px);
+    padding:12px 18px;margin-bottom:12px;scroll-margin-top:calc(var(--sticky-top,90px) + var(--group-head-h,0px));
   }
   .qpart .qid-badge{background:var(--gray);}
   .qpart .qtext{font-weight:600;}
@@ -1505,17 +1510,23 @@ function renderQuestionnaire(){
 function renderRootList(roots, body){
     roots = roots.slice().sort((x, y)=>x.order - y.order);
     let scDiv = null, lastSection = null;
+    // la thématique n'est rappelée que si elle diffère du titre déjà affiché dans l'en-tête figé
+    const norm = t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+    const headTitle = norm(document.getElementById('groupTitle').textContent);
     roots.forEach(r=>{
       if(r.section.id !== lastSection){
         lastSection = r.section.id;
-        const h = document.createElement('h3');
-        h.className = 'subchapter-title';
-        h.dataset.level = 2;
         const chapter = SECTIONS[r.chapterNum - 1];
-        const path = [displayTitle(chapter.title)];
-        if(r.section.id !== chapter.id) path.push(displayTitle(r.section.title));
-        h.innerHTML = `<span class="subchapter-kicker">${escapeHtml(path[0])}</span>${path[1] ? escapeHtml(path[1]) : ''}`;
-        body.appendChild(h);
+        const kicker = displayTitle(chapter.title);
+        const sub = r.section.id !== chapter.id ? displayTitle(r.section.title) : '';
+        const showKicker = norm(kicker) !== headTitle;
+        if(showKicker || sub){
+          const h = document.createElement('h3');
+          h.className = 'subchapter-title';
+          h.dataset.level = 2;
+          h.innerHTML = (showKicker ? `<span class="subchapter-kicker">${escapeHtml(kicker)}</span>` : '') + escapeHtml(sub);
+          body.appendChild(h);
+        }
         scDiv = document.createElement('div');
         scDiv.className = 'subchapter';
         body.appendChild(scDiv);
@@ -1602,6 +1613,11 @@ function updateStickyTop(){
 }
 window.addEventListener('resize', updateStickyTop);
 updateStickyTop();
+// hauteur de l'en-tête de chapitre figé, pour l'ancrage des cartes
+if(window.ResizeObserver){
+  const gh = document.querySelector('.group-head');
+  if(gh) new ResizeObserver(()=>document.documentElement.style.setProperty('--group-head-h', gh.offsetHeight + 'px')).observe(gh);
+}
 
 /* Rend récursivement le contenu d'une section (niveau >= 1) : ses questions propres,
    puis ses sous-sections (dans l'ordre du référentiel d'origine). */
