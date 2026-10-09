@@ -2135,107 +2135,113 @@ function renderAnalysis(){
   document.getElementById('th-risk').innerHTML = 'Risque maîtrisé' + (isExpert?'':' <span class="lock-note">🔒</span>');
   document.getElementById('th-action').innerHTML = 'Action à mettre en place' + (isExpert?'':' <span class="lock-note">🔒</span>');
   body.innerHTML = '';
-  let lastChapter = null;
+  // regroupement par chapitre BPP : une question citant plusieurs chapitres figure dans chacun
+  const qs = statQuestions();
+  const chapters = BPP_CHAPTERS.concat(qs.some(q=>q.bppChap.has('autre')) ? [{key:'autre', title:'Sans référence BPP'}] : []);
+  chapters.forEach(c=>{
+    const rows = qs.filter(q=>q.bppChap.has(c.key));
+    if(!rows.length) return;
+    const sepTr = document.createElement('tr');
+    sepTr.className = 'chapter-sep';
+    sepTr.innerHTML = `<td colspan="10">${c.key === 'autre' ? escapeHtml(c.title) : escapeHtml(bppChapterLabel(c))} · ${rows.length} question${rows.length>1?'s':''}</td>`;
+    body.appendChild(sepTr);
+    rows.forEach(q=>{
+      const derived = derivedOf(q);
+      // réponse déduite : on affiche la réponse héritée ; la qualification se fait sur la question maître
+      const st = derived ? Object.assign(defaultQState(), qState(q.id), {reponse: derived.reponse}) : qState(q.id);
 
-  statQuestions().forEach(q=>{
-    const derived = derivedOf(q);
-    // réponse déduite : on affiche la réponse héritée ; la qualification se fait sur la question maître
-    const st = derived ? Object.assign(defaultQState(), qState(q.id), {reponse: derived.reponse}) : qState(q.id);
+      const tr = document.createElement('tr');
+      tr.className = 'row-' + (st.reponse || 'vide');
 
-    if(q.chapterNum !== lastChapter){
-      lastChapter = q.chapterNum;
-      const sepTr = document.createElement('tr');
-      sepTr.className = 'chapter-sep';
-      sepTr.innerHTML = `<td colspan="10">Thématique ${q.chapterNum} — ${escapeHtml(displayTitle(q.chapterTitle))}</td>`;
-      body.appendChild(sepTr);
-    }
+      const pillClass = st.reponse ? 'pill-'+st.reponse : 'pill-vide';
+      const pillLabel = (st.reponse ? RESPONSE_LABELS[st.reponse] : '—') + (derived ? ' (auto)' : '');
+      const followCell = derived ? `<span class="cell-empty">Voir ${escapeHtml(derived.dep.code)}</span>` : null;
 
-    const tr = document.createElement('tr');
-    tr.className = 'row-' + (st.reponse || 'vide');
-
-    const pillClass = st.reponse ? 'pill-'+st.reponse : 'pill-vide';
-    const pillLabel = (st.reponse ? RESPONSE_LABELS[st.reponse] : '—') + (derived ? ' (auto)' : '');
-    const followCell = derived ? `<span class="cell-empty">Voir ${escapeHtml(derived.dep.code)}</span>` : null;
-
-    let critCell = '<span class="cell-empty">—</span>';
-    if(st.reponse === 'non'){
-      if(isExpert){
-        critCell = `<select class="sel-crit" data-qid="${q.id}">
-          <option value="">Choisir...</option>
-          <option value="mineure" ${st.criticite==='mineure'?'selected':''}>Mineure</option>
-          <option value="majeure" ${st.criticite==='majeure'?'selected':''}>Majeure</option>
-          <option value="critique" ${st.criticite==='critique'?'selected':''}>Critique</option>
-        </select>`;
-      } else {
-        critCell = st.criticite
-          ? `<span class="crit-badge crit-${st.criticite}">${criticiteLabel(st.criticite)}</span>`
-          : '<span class="cell-empty">Non qualifiée</span>';
+      let critCell = '<span class="cell-empty">—</span>';
+      if(st.reponse === 'non'){
+        if(isExpert){
+          critCell = `<select class="sel-crit" data-qid="${q.id}">
+            <option value="">Choisir...</option>
+            <option value="mineure" ${st.criticite==='mineure'?'selected':''}>Mineure</option>
+            <option value="majeure" ${st.criticite==='majeure'?'selected':''}>Majeure</option>
+            <option value="critique" ${st.criticite==='critique'?'selected':''}>Critique</option>
+          </select>`;
+        } else {
+          critCell = st.criticite
+            ? `<span class="crit-badge crit-${st.criticite}">${criticiteLabel(st.criticite)}</span>`
+            : '<span class="cell-empty">Non qualifiée</span>';
+        }
       }
-    }
 
-    let riskCell = '<span class="cell-empty">—</span>';
-    if(st.reponse === 'partiel'){
-      if(isExpert){
-        riskCell = `<select class="sel-risk" data-qid="${q.id}">
-          <option value="">Choisir...</option>
-          <option value="oui" ${st.risque_maitrise==='oui'?'selected':''}>Oui, acceptable</option>
-          <option value="non" ${st.risque_maitrise==='non'?'selected':''}>Non, à traiter</option>
-        </select>`;
-      } else {
-        riskCell = st.risque_maitrise
-          ? `<span class="${st.risque_maitrise==='oui'?'risk-ok':'risk-ko'}">${st.risque_maitrise==='oui'?'Oui, acceptable':'Non, à traiter'}</span>`
-          : '<span class="cell-empty">Non qualifié</span>';
+      let riskCell = '<span class="cell-empty">—</span>';
+      if(st.reponse === 'partiel'){
+        if(isExpert){
+          riskCell = `<select class="sel-risk" data-qid="${q.id}">
+            <option value="">Choisir...</option>
+            <option value="oui" ${st.risque_maitrise==='oui'?'selected':''}>Oui, acceptable</option>
+            <option value="non" ${st.risque_maitrise==='non'?'selected':''}>Non, à traiter</option>
+          </select>`;
+        } else {
+          riskCell = st.risque_maitrise
+            ? `<span class="${st.risque_maitrise==='oui'?'risk-ok':'risk-ko'}">${st.risque_maitrise==='oui'?'Oui, acceptable':'Non, à traiter'}</span>`
+            : '<span class="cell-empty">Non qualifié</span>';
+        }
       }
-    }
 
-    let actionCell = '<span class="cell-empty">—</span>';
-    if(st.reponse && st.reponse !== 'oui'){
-      actionCell = isExpert
-        ? `<input type="text" class="txt-action" data-qid="${q.id}" placeholder="Action corrective..." value="${escapeHtml(st.action)}">`
-        : (st.action ? escapeHtml(st.action) : '<span class="cell-empty">—</span>');
-    }
+      let actionCell = '<span class="cell-empty">—</span>';
+      if(st.reponse && st.reponse !== 'oui'){
+        actionCell = isExpert
+          ? `<input type="text" class="txt-action" data-qid="${q.id}" placeholder="Action corrective..." value="${escapeHtml(st.action)}">`
+          : (st.action ? escapeHtml(st.action) : '<span class="cell-empty">—</span>');
+      }
 
-    const commentCell = (st.comment_actif && st.commentaire)
-      ? `<span class="icon-badge" tabindex="0">&#128172;<span class="icon-tooltip">${escapeHtml(st.commentaire)}</span></span>`
-      : '<span class="cell-empty">—</span>';
+      const commentCell = (st.comment_actif && st.commentaire)
+        ? `<span class="icon-badge" tabindex="0">&#128172;<span class="icon-tooltip">${escapeHtml(st.commentaire)}</span></span>`
+        : '<span class="cell-empty">—</span>';
 
-    const proofParts = [];
-    if(st.preuve_texte) proofParts.push(escapeHtml(st.preuve_texte));
-    if(st.preuve_fichier_nom){
-      proofParts.push(`<a class="icon-badge" href="${st.preuve_fichier_url}" target="_blank" rel="noopener" title="${escapeHtml(st.preuve_fichier_nom)}">&#128206;</a>`);
-    }
-    const proofText = proofParts.length ? proofParts.join(' ') : '<span class="cell-empty">—</span>';
+      const proofParts = [];
+      if(st.preuve_texte) proofParts.push(escapeHtml(st.preuve_texte));
+      if(st.preuve_fichier_nom){
+        proofParts.push(`<a class="icon-badge" href="${st.preuve_fichier_url}" target="_blank" rel="noopener" title="${escapeHtml(st.preuve_fichier_nom)}">&#128206;</a>`);
+      }
+      const proofText = proofParts.length ? proofParts.join(' ') : '<span class="cell-empty">—</span>';
 
-    tr.innerHTML = `
-      <td><strong>${escapeHtml(q.code)}</strong></td>
-      <td>${escapeHtml(q.sectionTitle)}</td>
-      <td class="qtext-cell">${q.depth>0?'&#8627; ':''}${q.partStem?'<span class="muted">'+escapeHtml(q.partStem)+'</span> ':''}${escapeHtml(q.question)}</td>
-      <td>${escapeHtml((q.refs&&q.refs.length?q.refs:[q.ref||'']).join(', '))}</td>
-      <td><span class="pill ${pillClass}">${pillLabel}</span></td>
-      <td>${followCell || critCell}</td>
-      <td>${followCell || riskCell}</td>
-      <td>${followCell || actionCell}</td>
-      <td>${commentCell}</td>
-      <td>${proofText}</td>
-    `;
-    body.appendChild(tr);
+      tr.innerHTML = `
+        <td><strong>${escapeHtml(q.code)}</strong></td>
+        <td>${escapeHtml(q.sectionTitle)}</td>
+        <td class="qtext-cell">${q.depth>0?'&#8627; ':''}${q.partStem?'<span class="muted">'+escapeHtml(q.partStem)+'</span> ':''}${escapeHtml(q.question)}</td>
+        <td>${escapeHtml((q.refs&&q.refs.length?q.refs:[q.ref||'']).join(', '))}</td>
+        <td><span class="pill ${pillClass}">${pillLabel}</span></td>
+        <td>${followCell || critCell}</td>
+        <td>${followCell || riskCell}</td>
+        <td>${followCell || actionCell}</td>
+        <td>${commentCell}</td>
+        <td>${proofText}</td>
+      `;
+      body.appendChild(tr);
+    });
   });
 
+  // une question présente dans plusieurs chapitres : ses autres lignes suivent la saisie
+  const sync = (el, cls)=>body.querySelectorAll(`.${cls}[data-qid="${el.dataset.qid}"]`).forEach(o=>{ if(o !== el) o.value = el.value; });
   body.querySelectorAll('.sel-crit').forEach(sel=>{
     sel.addEventListener('change', ()=>{
       qState(sel.dataset.qid).criticite = sel.value || null;
+      sync(sel, 'sel-crit');
       scheduleSave(sel.dataset.qid);
     });
   });
   body.querySelectorAll('.sel-risk').forEach(sel=>{
     sel.addEventListener('change', ()=>{
       qState(sel.dataset.qid).risque_maitrise = sel.value || null;
+      sync(sel, 'sel-risk');
       scheduleSave(sel.dataset.qid);
     });
   });
   body.querySelectorAll('.txt-action').forEach(inp=>{
     inp.addEventListener('input', ()=>{
       qState(inp.dataset.qid).action = inp.value;
+      sync(inp, 'txt-action');
       scheduleSave(inp.dataset.qid);
     });
   });
