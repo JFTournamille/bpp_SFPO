@@ -2815,12 +2815,15 @@ function renderDashboard(){
   tbody.querySelectorAll('[data-open-member]').forEach(b=>b.addEventListener('click', ()=>openFromDashboard(+b.dataset.openMember, 'membre')));
   tbody.querySelectorAll('[data-demo]').forEach(b=>b.addEventListener('click', async ()=>{
     const ev = DASH.evaluations.find(x=>x.id === +b.dataset.demo);
-    if(!confirm(`Remplir le questionnaire « ${ev && ev.centre_libelle || 'sans centre'} » avec des données FICTIVES de démonstration `
-      + `(réponses, commentaires, preuves et pièces jointes, criticités, actions) ?\n\nÀ réserver à un questionnaire de démonstration : `
-      + `le bouton « Réinitialiser » du questionnaire permet ensuite de tout effacer.`)) return;
+    const choix = prompt(`Remplir le questionnaire « ${ev && ev.centre_libelle || 'sans centre'} » avec des données FICTIVES de démonstration `
+      + `(réponses, commentaires, preuves et pièces jointes, criticités, actions).\n\nProfil :\n`
+      + `  1 = bon niveau (peu d'écarts, quasi aucun écart critique)\n  2 = contrasté (niveaux très variables, nombreux écarts)\n\n`
+      + `À réserver à un questionnaire de démonstration : « Réinitialiser » permet ensuite de tout effacer.`, '1');
+    if(choix === null) return;
+    const profil = String(choix).trim() === '2' ? 'contraste' : 'bon';
     b.disabled = true; b.textContent = 'Remplissage…';
     try{
-      const r = await apiFetch(`/admin/evaluations/${b.dataset.demo}/demo`, {method:'POST'});
+      const r = await apiFetch(`/admin/evaluations/${b.dataset.demo}/demo?profil=${profil}`, {method:'POST'});
       alert(`Questionnaire rempli : ${r.reponses} réponses (${r.oui} oui, ${r.partiel} partiel, ${r.non} non, ${r.na} NA), `
         + `${r.commentaires} commentaires, ${r.preuves} preuves dont ${r.fichiers} pièces jointes, ${r.criticites} criticités, ${r.actions} actions.`);
     }catch(err){ alert(err.message); }
