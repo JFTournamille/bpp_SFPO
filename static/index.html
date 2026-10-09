@@ -20,8 +20,8 @@
     --bg-soft:#eef1f4;
     --bg-soft-2:#e3e8ee;
     --q-bg:#e8ecf1;
-    --label-bg:#f3f5f8;
-    --page-bg:#d9dfe7;
+    --page-bg:#cbd6e3;
+    --card-bg:#fbf1f6;
     --border:#c7cfd8;
     --green:#256029;
     --green-bg:#dcf0de;
@@ -212,6 +212,7 @@
     margin:0 0 10px 4px;
     display:flex;align-items:center;gap:8px;
   }
+  .by-chapter h3.subchapter-title{color:var(--fuchsia);}
   .subchapter h3 .num{color:var(--text-light);font-weight:600;}
   h3.subchapter-title{flex-direction:column;align-items:flex-start;gap:0;margin-top:18px;}
   .subchapter-kicker{font-size:11px;font-weight:600;color:var(--fuchsia);text-transform:none;letter-spacing:0;}
@@ -303,7 +304,7 @@
     flex:1;min-width:110px;text-align:center;
     font-size:12.5px;font-weight:600;
     padding:9px 8px;border-radius:var(--radius-pill);
-    border:1.5px solid var(--border);color:var(--text-light);background:var(--label-bg);
+    border:1.5px solid var(--border);color:var(--text-light);background:#fff;
     cursor:pointer;transition:all .12s;
   }
   .answers input{display:none;}
@@ -536,14 +537,14 @@
   .mail-status.ko{background:var(--orange-bg);color:var(--orange);}
 
   /* ===== Carte question — design « signalétique » ===== */
-  .qcard, .qpart{background:#fff;border:1.5px solid #aeb9c5;border-radius:12px;padding:0;
+  .qcard, .qpart{background:var(--card-bg);border:1.5px solid #aeb9c5;border-radius:12px;padding:0;
     box-shadow:0 2px 6px rgba(15,25,40,.08);margin-bottom:10px;}
   .qcard[data-reponse]{border-left-width:6px;}
   .qrow{display:grid;grid-template-columns:auto 1fr auto;gap:0 16px;padding:14px 16px;align-items:start;}
   .qid-badge{background:var(--blue-darker);color:#fff;font-weight:800;font-size:12.5px;letter-spacing:.03em;
     border-radius:7px;padding:6px 10px;min-width:62px;text-align:center;}
   .qpart .qid-badge{background:var(--gray);}
-  .qtext{font-size:15px;font-weight:600;line-height:1.42;color:#141a20;}
+  .qtext{font-size:15.5px;font-weight:700;line-height:1.42;color:#0b1118;}
   .qcard.sub .qtext{font-size:14px;}
   .ref-badges{margin-top:6px;}
   .ref-badge{border-radius:5px;padding:1px 7px;}
@@ -1479,6 +1480,7 @@ function renderQuestionnaire(){
 
   const body = document.getElementById('groupBody');
   body.innerHTML = '';
+  body.classList.toggle('by-chapter', auditMode !== 'theme');
   QITEM_EL = {};
   if(!group) return;
   document.getElementById('groupKicker').textContent = group.kicker;
@@ -1495,7 +1497,7 @@ function renderQuestionnaire(){
       h.innerHTML = `Questions posées dans d'autres thématiques et concernant aussi ce chapitre
         <span>${extra.length} question${extra.length>1?'s':''} · une question déjà renseignée est verrouillée ici et se modifie là où elle a été répondue</span>`;
       body.appendChild(h);
-      renderRootList(extra, body, {chapterKicker:false});
+      renderRootList(extra, body, {titles:false});
     }
   } else {
     // Par chapitre BPP : toutes les questions concernant ce chapitre, dans l'ordre du référentiel
@@ -1518,11 +1520,9 @@ function renderRootList(roots, body, opts = {}){
         const chapter = SECTIONS[r.chapterNum - 1];
         const kicker = displayTitle(chapter.title);
         const sub = r.section.id !== chapter.id ? displayTitle(r.section.title) : '';
-        // par thématique, le titre du chapitre d'origine n'est pas repris : seul le sous-chapitre
-        // est affiché (le chapitre ne sert d'intitulé que pour ses questions sans sous-chapitre)
-        const noKicker = opts.chapterKicker === false;
-        const showKicker = !noKicker && norm(kicker) !== headTitle;
-        const label = noKicker ? (sub || kicker) : sub;
+        // par thématique (opts.titles === false), ni chapitre ni sous-chapitre ne sont repris
+        const showKicker = opts.titles !== false && norm(kicker) !== headTitle;
+        const label = opts.titles !== false ? sub : '';
         if(showKicker || label){
           const h = document.createElement('h3');
           h.className = 'subchapter-title';
@@ -1623,20 +1623,13 @@ if(window.ResizeObserver){
 }
 
 /* Rend récursivement le contenu d'une section (niveau >= 1) : ses questions propres,
-   puis ses sous-sections (dans l'ordre du référentiel d'origine). */
+   puis ses sous-sections (dans l'ordre du référentiel d'origine). Vue par thématique :
+   les sous-titres des chapitres ne sont pas repris, les questions s'enchaînent. */
 function sectionHasQuestions(section){
   return section.questions.length > 0 || section.sections.some(sectionHasQuestions);
 }
 function renderSectionBody(section, container, level){
   if(!sectionHasQuestions(section)) return; // sous-chapitre sans question dans le référentiel importé
-  if(level > 1){
-    const h = document.createElement('h3');
-    h.className = 'subchapter-title';
-    h.dataset.level = level;
-    h.style.marginLeft = ((level-2) * 16) + 'px';
-    h.textContent = section.title;
-    container.appendChild(h);
-  }
   if(section.questions.length){
     const scDiv = document.createElement('div');
     scDiv.className = 'subchapter';
