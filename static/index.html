@@ -937,11 +937,10 @@ function displayTitle(t){
    l'ordre du document (questions propres à une section avant ses sous-sections). */
 function flattenQuestions(q, section, chapterNum, chapterTitle, sub, depth, out, bppChap, parentId){
   if(depth === 0){
-    // chapitres BPP du bloc = ceux cités par la question et par toutes ses sous-questions
-    // + chapitre d'origine (thématique où la question est rangée dans le référentiel)
+    // chapitres BPP du bloc = ceux cités par la question et par toutes ses sous-questions ;
+    // la thématique où elle est rangée ne suffit pas : sans référence de ce chapitre, elle n'y figure pas
     bppChap = new Set();
     (function collect(n){ refChapters(n).forEach(c=>bppChap.add(c)); (n.children||[]).forEach(collect); })(q);
-    if(THEME_CHAP[chapterNum - 1]) bppChap.add(THEME_CHAP[chapterNum - 1]);
     if(!bppChap.size) bppChap.add('autre');
     ROOT_QUESTIONS.push({node:q, chapterNum, bppChap, section, sub, order: ROOT_QUESTIONS.length});
   }
