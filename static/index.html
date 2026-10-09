@@ -2807,7 +2807,8 @@ function renderDashboard(){
         ${e.centre_id ? '' : `<button class="btn small ghost" data-attach="${e.id}">Rattacher</button>`}
         <button class="btn small" data-open="${e.id}">Ouvrir</button>
         <button class="btn small ghost" data-open-member="${e.id}" title="Ouvrir en simulant la vue d'un membre">Vue membre</button>
-        ${e.answered ? '' : `<button class="btn small ghost" data-demo="${e.id}" title="Remplir ce questionnaire vierge avec des données fictives pour une démonstration">Remplir (démo)</button>`}
+        ${e.answered ? '' : `<button class="btn small ghost" data-demo="${e.id}" data-profil="standard" title="Remplir ce questionnaire vierge avec des données fictives contrastées (non-conformités fréquentes, criticités majeures et critiques)">Démo</button>
+          <button class="btn small ghost" data-demo="${e.id}" data-profil="leger" title="Remplir ce questionnaire vierge avec des données fictives d'un centre plutôt conforme (peu de non-conformités, surtout mineures)">Démo peu critique</button>`}
       </td>
     </tr>`;
   }).join('');
@@ -2815,14 +2816,16 @@ function renderDashboard(){
   tbody.querySelectorAll('[data-open-member]').forEach(b=>b.addEventListener('click', ()=>openFromDashboard(+b.dataset.openMember, 'membre')));
   tbody.querySelectorAll('[data-demo]').forEach(b=>b.addEventListener('click', async ()=>{
     const ev = DASH.evaluations.find(x=>x.id === +b.dataset.demo);
+    const leger = b.dataset.profil === 'leger';
     if(!confirm(`Remplir le questionnaire « ${ev && ev.centre_libelle || 'sans centre'} » avec des données FICTIVES de démonstration `
+      + (leger ? `— profil « peu critique » : centre plutôt conforme, non-conformités rares et surtout mineures ` : `— profil contrasté `)
       + `(réponses, commentaires, preuves et pièces jointes, criticités, actions) ?\n\nÀ réserver à un questionnaire de démonstration : `
       + `le bouton « Réinitialiser » du questionnaire permet ensuite de tout effacer.`)) return;
     b.disabled = true; b.textContent = 'Remplissage…';
     try{
-      const r = await apiFetch(`/admin/evaluations/${b.dataset.demo}/demo`, {method:'POST'});
+      const r = await apiFetch(`/admin/evaluations/${b.dataset.demo}/demo?profil=${b.dataset.profil}`, {method:'POST'});
       alert(`Questionnaire rempli : ${r.reponses} réponses (${r.oui} oui, ${r.partiel} partiel, ${r.non} non, ${r.na} NA), `
-        + `${r.commentaires} commentaires, ${r.preuves} preuves dont ${r.fichiers} pièces jointes, ${r.criticites} criticités, ${r.actions} actions.`);
+        + `${r.commentaires} commentaires, ${r.preuves} preuves dont ${r.fichiers} pièces jointes, ${r.criticites} criticités (${r.criticite_mineure} mineures, ${r.criticite_majeure} majeures, ${r.criticite_critique} critiques), ${r.actions} actions.`);
     }catch(err){ alert(err.message); }
     loadDashboard();
   }));

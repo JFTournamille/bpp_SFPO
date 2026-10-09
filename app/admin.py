@@ -138,10 +138,12 @@ def create_evaluation(body: EvaluationCreate):
 
 
 @router.post("/evaluations/{evaluation_id}/demo")
-def demo_fill(evaluation_id: int, me: dict = Depends(require_expert)):
+def demo_fill(evaluation_id: int, profil: str = "standard", me: dict = Depends(require_expert)):
     """Remplit un questionnaire VIERGE avec des données de démonstration (réponses, commentaires,
     preuves avec pièces jointes PDF, expertise). Refusé si le questionnaire contient déjà des réponses."""
     from app import demo
+    if profil not in demo.PROFILS:
+        raise HTTPException(status_code=422, detail="Profil de démonstration inconnu")
     ev = fetch_one("SELECT e.id, e.status, c.libelle FROM evaluations e LEFT JOIN centres c ON c.id = e.centre_id "
                    "WHERE e.id = %s", (evaluation_id,))
     if not ev:
@@ -149,7 +151,7 @@ def demo_fill(evaluation_id: int, me: dict = Depends(require_expert)):
     if fetch_one("SELECT 1 AS x FROM responses WHERE evaluation_id = %s LIMIT 1", (evaluation_id,)):
         raise HTTPException(status_code=409, detail="Ce questionnaire contient déjà des réponses : démonstration réservée à un questionnaire vierge")
     upload_dir = os.environ.get("UPLOAD_DIR", "/app/uploads")
-    return demo.fill(evaluation_id, me["id"], ev["libelle"] or "", upload_dir)
+    return demo.fill(evaluation_id, me["id"], ev["libelle"] or "", upload_dir, profil=profil)
 
 
 @router.patch("/evaluations/{evaluation_id}")

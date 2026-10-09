@@ -50,6 +50,15 @@ ACTIONS = [
     "Désigner un référent et formaliser ses missions",
     "Renforcer le double contrôle sur ce point",
 ]
+# Profils de démonstration : niveau de conformité par thématique, part des « partiel » et des
+# « non » parmi les réponses non conformes (le reste en NA), poids des criticités, probabilité
+# qu'une réponse partielle soit jugée « risque maîtrisé ».
+PROFILS = {
+    "standard": dict(niveau=(0.45, 0.92), declencheur=0.88, partiel=0.45, non=0.43,
+                     criticites=(50, 35, 15), risque_maitrise=0.5),
+    "leger": dict(niveau=(0.80, 0.96), declencheur=0.93, partiel=0.55, non=0.30,
+                  criticites=(82, 16, 2), risque_maitrise=0.75),
+}
 FICHIERS = ["procedure", "enregistrement", "rapport_audit", "certificat", "compte_rendu", "grille_habilitation"]
 
 
@@ -87,7 +96,8 @@ def _met(reponse, expected):
     return reponse == expected or (expected == "oui" and reponse == "partiel")
 
 
-def fill(evaluation_id: int, user_id: int, centre: str, upload_dir: str, seed=None) -> dict:
+def fill(evaluation_id: int, user_id: int, centre: str, upload_dir: str, seed=None, profil: str = "standard") -> dict:
+    cfg = PROFILS.get(profil, PROFILS["standard"])
     rnd = random.Random(seed)
     sections = {s["id"]: s for s in fetch_all("SELECT id, parent_id FROM sections")}
     questions = fetch_all(
@@ -100,7 +110,7 @@ def fill(evaluation_id: int, user_id: int, centre: str, upload_dir: str, seed=No
             sid = sections[sid]["parent_id"]
         return sid
     # niveau de conformité propre à chaque thématique (statistiques contrastées)
-    level = {sid: rnd.uniform(0.45, 0.92) for sid in sections if not sections[sid]["parent_id"]}
+    level = {sid: rnd.uniform(*cfg["niveau"]) for sid in sections if not sections[sid]["parent_id"]}
 
     answers, visible = {}, {}
     by_id = {q["id"]: q for q in questions}
@@ -124,13 +134,13 @@ def fill(evaluation_id: int, user_id: int, centre: str, upload_dir: str, seed=No
         p = level[top(q["section_id"])]
         # question déclencheuse (d'autres en dépendent) : plutôt « oui » pour déployer le questionnaire
         if q["id"] in triggers:
-            p = max(p, 0.88)
+            p = max(p, cfg["declencheur"])
         r = rnd.random()
         if r < p:
             rep = "oui"
-        elif r < p + (1 - p) * 0.45:
+        elif r < p + (1 - p) * cfg["partiel"]:
             rep = "partiel"
-        elif r < p + (1 - p) * 0.88:
+        elif r < p + (1 - p) * (cfg["partiel"] + cfg["non"]):
             rep = "non"
         else:
             rep = "na"
@@ -143,10 +153,10 @@ def fill(evaluation_id: int, user_id: int, centre: str, upload_dir: str, seed=No
         criticite = risque = None
         action = ""
         if rep == "non":
-            criticite = rnd.choices(["mineure", "majeure", "critique"], weights=[50, 35, 15])[0] if rnd.random() < 0.85 else None
+            criticite = rnd.choices(["mineure", "majeure", "critique"], weights=cfg["criticites"])[0] if rnd.random() < 0.85 else None
             action = rnd.choice(ACTIONS) if criticite or rnd.random() < 0.3 else ""
         elif rep == "partiel":
-            risque = rnd.choice(["oui", "non"]) if rnd.random() < 0.85 else None
+            risque = ("oui" if rnd.random() < cfg["risque_maitrise"] else "non") if rnd.random() < 0.85 else None
             action = rnd.choice(ACTIONS) if risque == "non" or rnd.random() < 0.25 else ""
         fname = fpath = None
         if preuve and rnd.random() < 0.35:
@@ -178,4 +188,5 @@ def fill(evaluation_id: int, user_id: int, centre: str, upload_dir: str, seed=No
     stats = {k: sum(1 for r in rows if r[2] == k) for k in ("oui", "partiel", "non", "na")}
     return {"reponses": len(rows), **stats, "commentaires": sum(1 for r in rows if r[4]),
             "preuves": sum(1 for r in rows if r[5]), "fichiers": len(files),
-            "criticites": sum(1 for r in rows if r[8]), "actions": sum(1 for r in rows if r[10])}
+            "criticites": sum(1 for r in rows if r[8]), "actions": sum(1 for r in rows if r[10]),
+            **{f"criticite_{c}": sum(1 for r in rows if r[8] == c) for c in ("mineure", "majeure", "critique")}}
