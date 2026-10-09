@@ -1496,7 +1496,7 @@ function renderQuestionnaire(){
       h.innerHTML = `Questions posées dans d'autres thématiques et concernant aussi ce chapitre
         <span>${extra.length} question${extra.length>1?'s':''} · une question déjà renseignée est verrouillée ici et se modifie là où elle a été répondue</span>`;
       body.appendChild(h);
-      renderRootList(extra, body);
+      renderRootList(extra, body, {chapterKicker:false});
     }
   } else {
     // Par chapitre BPP : toutes les questions concernant ce chapitre, dans l'ordre du référentiel
@@ -1507,7 +1507,7 @@ function renderQuestionnaire(){
 
 /* Liste de blocs (question + sous-questions) dans l'ordre du référentiel, avec l'intertitre
    (thématique · sous-chapitre) à chaque changement de section */
-function renderRootList(roots, body){
+function renderRootList(roots, body, opts = {}){
     roots = roots.slice().sort((x, y)=>x.order - y.order);
     let scDiv = null, lastSection = null;
     // la thématique n'est rappelée que si elle diffère du titre déjà affiché dans l'en-tête figé
@@ -1519,12 +1519,16 @@ function renderRootList(roots, body){
         const chapter = SECTIONS[r.chapterNum - 1];
         const kicker = displayTitle(chapter.title);
         const sub = r.section.id !== chapter.id ? displayTitle(r.section.title) : '';
-        const showKicker = norm(kicker) !== headTitle;
-        if(showKicker || sub){
+        // par thématique, le titre du chapitre d'origine n'est pas repris : seul le sous-chapitre
+        // est affiché (le chapitre ne sert d'intitulé que pour ses questions sans sous-chapitre)
+        const noKicker = opts.chapterKicker === false;
+        const showKicker = !noKicker && norm(kicker) !== headTitle;
+        const label = noKicker ? (sub || kicker) : sub;
+        if(showKicker || label){
           const h = document.createElement('h3');
           h.className = 'subchapter-title';
           h.dataset.level = 2;
-          h.innerHTML = (showKicker ? `<span class="subchapter-kicker">${escapeHtml(kicker)}</span>` : '') + escapeHtml(sub);
+          h.innerHTML = (showKicker ? `<span class="subchapter-kicker">${escapeHtml(kicker)}</span>` : '') + escapeHtml(label);
           body.appendChild(h);
         }
         scDiv = document.createElement('div');
