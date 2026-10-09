@@ -20,6 +20,7 @@
     --bg-soft:#eef1f4;
     --bg-soft-2:#e3e8ee;
     --q-bg:#e8ecf1;
+    --label-bg:#f3f5f8;
     --page-bg:#d9dfe7;
     --border:#c7cfd8;
     --green:#256029;
@@ -186,7 +187,12 @@
   .side-item .bar{height:4px;border-radius:var(--radius-pill);background:rgba(255,255,255,.2);margin-top:8px;overflow:hidden;}
   .side-item .bar > div{height:100%;width:0;background:#fff;transition:width .25s ease;}
 
-  .group-head{margin-bottom:18px;}
+  /* en-tête du chapitre figé sous la barre de progression pendant le défilement */
+  .group-head{
+    position:sticky;top:calc(var(--sticky-top,90px) - 16px);z-index:30;
+    background:var(--page-bg);padding:12px 0 14px;margin:-12px 0 12px;
+    border-bottom:1px solid var(--border);
+  }
   .group-head .kicker{font-size:12.5px;font-weight:700;color:var(--fuchsia);text-transform:uppercase;letter-spacing:.05em;}
   .group-head h2{margin:2px 0 12px;font-size:24px;font-weight:700;color:var(--text);line-height:1.25;}
   .group-head .progress-row{margin:0;}
@@ -240,7 +246,7 @@
     padding:16px 18px;margin-bottom:12px;
     box-shadow:var(--shadow);
     transition:border-color .15s;
-    scroll-margin-top:var(--sticky-top,90px);
+    scroll-margin-top:calc(var(--sticky-top,90px) + var(--group-head-h,0px));
   }
   .qcard.answered{border-left:4px solid var(--blue);}
   .qcard[data-reponse="oui"]{border-left:4px solid var(--green);}
@@ -253,7 +259,7 @@
   /* ligne « PART » : partie initiale commune à plusieurs questions, sans réponse */
   .qpart{
     background:var(--bg-soft-2);border:1px dashed var(--border);border-radius:var(--radius);
-    padding:12px 18px;margin-bottom:12px;scroll-margin-top:var(--sticky-top,90px);
+    padding:12px 18px;margin-bottom:12px;scroll-margin-top:calc(var(--sticky-top,90px) + var(--group-head-h,0px));
   }
   .qpart .qid-badge{background:var(--gray);}
   .qpart .qtext{font-weight:600;}
@@ -297,7 +303,7 @@
     flex:1;min-width:110px;text-align:center;
     font-size:12.5px;font-weight:600;
     padding:9px 8px;border-radius:var(--radius-pill);
-    border:1.5px solid var(--border);color:var(--text-light);background:#fff;
+    border:1.5px solid var(--border);color:var(--text-light);background:var(--label-bg);
     cursor:pointer;transition:all .12s;
   }
   .answers input{display:none;}
@@ -931,11 +937,10 @@ function displayTitle(t){
    l'ordre du document (questions propres à une section avant ses sous-sections). */
 function flattenQuestions(q, section, chapterNum, chapterTitle, sub, depth, out, bppChap, parentId){
   if(depth === 0){
-    // chapitres BPP du bloc = ceux cités par la question et par toutes ses sous-questions
-    // + chapitre d'origine (thématique où la question est rangée dans le référentiel)
+    // chapitres BPP du bloc = ceux cités par la question et par toutes ses sous-questions ;
+    // la thématique où elle est rangée ne suffit pas : sans référence de ce chapitre, elle n'y figure pas
     bppChap = new Set();
     (function collect(n){ refChapters(n).forEach(c=>bppChap.add(c)); (n.children||[]).forEach(collect); })(q);
-    if(THEME_CHAP[chapterNum - 1]) bppChap.add(THEME_CHAP[chapterNum - 1]);
     if(!bppChap.size) bppChap.add('autre');
     ROOT_QUESTIONS.push({node:q, chapterNum, bppChap, section, sub, order: ROOT_QUESTIONS.length});
   }
@@ -1490,7 +1495,7 @@ function renderQuestionnaire(){
       h.innerHTML = `Questions posées dans d'autres thématiques et concernant aussi ce chapitre
         <span>${extra.length} question${extra.length>1?'s':''} · une question déjà renseignée est verrouillée ici et se modifie là où elle a été répondue</span>`;
       body.appendChild(h);
-      renderRootList(extra, body);
+      renderRootList(extra, body, {chapterKicker:false});
     }
   } else {
     // Par chapitre BPP : toutes les questions concernant ce chapitre, dans l'ordre du référentiel
@@ -1501,20 +1506,30 @@ function renderQuestionnaire(){
 
 /* Liste de blocs (question + sous-questions) dans l'ordre du référentiel, avec l'intertitre
    (thématique · sous-chapitre) à chaque changement de section */
-function renderRootList(roots, body){
+function renderRootList(roots, body, opts = {}){
     roots = roots.slice().sort((x, y)=>x.order - y.order);
     let scDiv = null, lastSection = null;
+    // la thématique n'est rappelée que si elle diffère du titre déjà affiché dans l'en-tête figé
+    const norm = t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+    const headTitle = norm(document.getElementById('groupTitle').textContent);
     roots.forEach(r=>{
       if(r.section.id !== lastSection){
         lastSection = r.section.id;
-        const h = document.createElement('h3');
-        h.className = 'subchapter-title';
-        h.dataset.level = 2;
         const chapter = SECTIONS[r.chapterNum - 1];
-        const path = [displayTitle(chapter.title)];
-        if(r.section.id !== chapter.id) path.push(displayTitle(r.section.title));
-        h.innerHTML = `<span class="subchapter-kicker">${escapeHtml(path[0])}</span>${path[1] ? escapeHtml(path[1]) : ''}`;
-        body.appendChild(h);
+        const kicker = displayTitle(chapter.title);
+        const sub = r.section.id !== chapter.id ? displayTitle(r.section.title) : '';
+        // par thématique, le titre du chapitre d'origine n'est pas repris : seul le sous-chapitre
+        // est affiché (le chapitre ne sert d'intitulé que pour ses questions sans sous-chapitre)
+        const noKicker = opts.chapterKicker === false;
+        const showKicker = !noKicker && norm(kicker) !== headTitle;
+        const label = noKicker ? (sub || kicker) : sub;
+        if(showKicker || label){
+          const h = document.createElement('h3');
+          h.className = 'subchapter-title';
+          h.dataset.level = 2;
+          h.innerHTML = (showKicker ? `<span class="subchapter-kicker">${escapeHtml(kicker)}</span>` : '') + escapeHtml(label);
+          body.appendChild(h);
+        }
         scDiv = document.createElement('div');
         scDiv.className = 'subchapter';
         body.appendChild(scDiv);
@@ -1601,6 +1616,11 @@ function updateStickyTop(){
 }
 window.addEventListener('resize', updateStickyTop);
 updateStickyTop();
+// hauteur de l'en-tête de chapitre figé, pour l'ancrage des cartes
+if(window.ResizeObserver){
+  const gh = document.querySelector('.group-head');
+  if(gh) new ResizeObserver(()=>document.documentElement.style.setProperty('--group-head-h', gh.offsetHeight + 'px')).observe(gh);
+}
 
 /* Rend récursivement le contenu d'une section (niveau >= 1) : ses questions propres,
    puis ses sous-sections (dans l'ordre du référentiel d'origine). */
